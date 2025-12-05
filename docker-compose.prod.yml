@@ -1,0 +1,45 @@
+version: "3.3"
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:15
+    restart: always
+    env_file:
+      - ./backend/.env.production
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    expose:
+      - "5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - prod_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  marker:
+    container_name: marker
+    build:
+      context: ./service/marker
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - "8001"
+    networks:
+      - prod_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pgdata:
+
+
+networks:
+  prod_network:
+    driver: bridge

@@ -1,0 +1,91 @@
+version: "3.3"
+services:
+  postgres:
+    container_name: postgres_dev
+    image: postgres:15
+    restart: always
+    env_file:
+      - ./backend/.env.development
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    expose:
+      - "5432"
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - dev_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    container_name: minio_dev
+    image: minio/minio:latest
+    restart: always
+    env_file:
+      - ./backend/.env.development
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin123}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    networks:
+      - dev_network
+    command: server --console-address ":9001" /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_dev
+    restart: always
+    ports:
+      - "6335:6333"
+      - "6336:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - dev_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_dev
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - dev_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pgdata:
+  minio_data:
+  qdrant_data:
+  redis_data:
+
+
+networks:
+  dev_network:
+    driver: bridge
