@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.messages.utils import count_tokens_approximately
 from langgraph.graph import StateGraph, START, END
 from langmem.short_term import SummarizationNode
+from app.services.csv_tables_service import get_cached_tables_schema_simple
 
 from app.services.rag_service.component.chat_history import ChatHistory
 from app.services.rag_service.component.prompt import (
@@ -23,8 +24,8 @@ class RAG:
         self.rewrite_llm = get_cost_effective_chat_model()
         self.llm = get_high_performance_chat_model()
         self.graph = None
-        self.agent_executor = self.llm.bind_tools(tools)
         self.summarizer_llm = get_cost_effective_chat_model().bind(max_tokens=128)
+        self.agent_executor = get_cost_effective_chat_model().bind_tools(tools).bind(max_tokens=1024, temperature=0)
 
         self.summarization_node = SummarizationNode(
             token_counter=count_tokens_approximately,
@@ -61,7 +62,8 @@ class RAG:
         
         tool_selection_prompt = RETRIEVE_INFORMATION_WITH_TOOLS_PROMPT.format(
             question=question,
-            summary=summary
+            summary=summary,
+            schema=get_cached_tables_schema_simple()
         )
 
         messages = [
@@ -162,5 +164,5 @@ class RAG:
             stream_mode="messages",
             config=config,
         ):
-            if msg.content and metadata["langgraph_node"] in ["tool_executor", "generate_response"]:
+            if msg.content and metadata["langgraph_node"] in ["generate_response"]:
                 yield msg.content

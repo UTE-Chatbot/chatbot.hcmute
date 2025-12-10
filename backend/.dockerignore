@@ -1,3 +1,9 @@
+# Assets
+app/assets/csv/
+app/assets/json
+app/assets/*.db
+*.db
+
 # Git
 .git
 .gitignore

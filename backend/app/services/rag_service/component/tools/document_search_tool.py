@@ -13,11 +13,17 @@ doc_retriever_instance = DocRetriever()
 @tool
 async def document_search_tool(query: str) -> str:
     """
-    Search documents in the vector store based on the query.
-    Return the combined content of the top matching documents.
-    Args:
-        query (str): The search query.
-    Returns:
-        str: The combined content of the top matching documents.
+    Tìm kiếm nội dung văn bản trong kho tài liệu (vector store) dựa trên truy vấn của người dùng hỏi về Trường.
+
+    Mục đích:
+        - Lấy các thông tin mô tả ngành, quy chế, thủ tục, hướng dẫn, thông báo, CSVC, đời sống sinh viên,...
+        - Trả về phần nội dung kết hợp từ các tài liệu khớp nhất.
+
+    Tham số:
+        query (str): Câu truy vấn tìm kiếm tài liệu.
+
+    Kết quả trả về:
+        str: Nội dung tổng hợp của các tài liệu phù hợp nhất.
     """
+
     return await doc_retriever_instance.execute(query)

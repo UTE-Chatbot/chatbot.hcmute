@@ -1,0 +1,135 @@
+"use client";
+
+import Link from "next/link";
+import * as React from "react";
+
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { siteConfig } from "@/lib/config";
+import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+import { ArrowRightIcon, ContactIcon } from "lucide-react";
+import { ContactModal } from "./contact-modal";
+
+export default function NavigationMenuDemo() {
+  return (
+    <NavigationMenu>
+      <NavigationMenuList>
+        {siteConfig.header.map((item, index) => (
+          <NavigationMenuItem key={index}>
+            {item.trigger ? (
+              <>
+                <NavigationMenuTrigger className="" asChild>
+                  <Button
+                    effect="expandIcon"
+                    variant="outline"
+                    className="rounded-3xl cursor-pointer"
+                    iconPlacement="right"
+                  >
+                    {item.trigger}
+                  </Button>
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <ul
+                    className={`grid gap-3 ${
+                      item.content?.main
+                        ? "md:w-[400px]  p-6 lg:w-[500px] lg:grid-cols-[.75fr_1fr]"
+                        : "md:w-[400px] p-2 md:grid-cols-1"
+                    }`}
+                  >
+                    {item.content?.main && (
+                      <li className="row-span-3">
+                        <NavigationMenuLink className="" asChild>
+                          <Link
+                            className="flex h-full w-full select-none flex-col justify-end rounded-3xl bg-primary/10 from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
+                            href={item.content?.main.href}
+                          >
+                            {item.content?.main.icon}
+                            <div className="mb-2 mt-4 text-lg font-medium">
+                              {item.content?.main.title}
+                            </div>
+                            <p className="text-sm leading-tight text-muted-foreground">
+                              {item.content?.main.description}
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    )}
+                    {item.content.items.map((subItem, subIndex) => (
+                      <ListItem
+                        key={subIndex}
+                        href={subItem.href}
+                        title={subItem.title}
+                        className="hover:bg-primary/10"
+                      >
+                        {subItem.description}
+                      </ListItem>
+                    ))}
+                  </ul>
+                </NavigationMenuContent>
+              </>
+            ) : item.label === "Liên hệ" ? (
+              <ContactModal
+                trigger={
+                  <Button
+                    variant="outline"
+                    className="rounded-3xl cursor-pointer"
+                    iconPlacement="right"
+                  >
+                    {item.label}
+                  </Button>
+                }
+              />
+            ) : (
+              <NavigationMenuLink asChild>
+                <Link href={item.href || ""} className="">
+                  <Button
+                    variant="outline"
+                    className="rounded-3xl cursor-pointer"
+                    iconPlacement="right"
+                  >
+                    {item.label}
+                  </Button>
+                </Link>
+              </NavigationMenuLink>
+            )}
+          </NavigationMenuItem>
+        ))}
+      </NavigationMenuList>
+    </NavigationMenu>
+  );
+}
+
+const ListItem = React.forwardRef<
+  React.ElementRef<"a">,
+  React.ComponentPropsWithoutRef<"a">
+>(({ className, title, children, ...props }, ref) => {
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <a
+          ref={ref}
+          className={cn(
+            "block h-full w-full select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            className
+          )}
+          {...props}
+        >
+          <div className="text-sm font-medium leading-none">{title}</div>
+          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+            {children}
+          </p>
+        </a>
+      </NavigationMenuLink>
+    </li>
+  );
+});
+
+ListItem.displayName = "ListItem";

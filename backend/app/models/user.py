@@ -25,4 +25,3 @@ class User(Base, BaseModel):
     # Relationships
     threads = relationship("Thread", back_populates="user", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
-    feedback = relationship("Feedback", back_populates="user", cascade="all, delete-orphan")

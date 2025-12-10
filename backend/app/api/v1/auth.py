@@ -73,12 +73,12 @@ async def google_login_redirect(request: Request):
     redirect_uri = settings.google_redirect_uri
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
+from fastapi.responses import RedirectResponse
 
-@router.get("/google/callback", response_class=JSONResponse)
+@router.get("/google/callback")
 async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         token_data = await oauth.google.authorize_access_token(request)
-
         user_info = token_data.get("userinfo")
         if not user_info:
             user_info = await oauth.google.userinfo(token=token_data)
@@ -94,28 +94,27 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
             "sub": str(google_user.id),
             "role": google_user.role.value
         })
-        
-        response = JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"access_token": jwt_token}
+
+        response = RedirectResponse(
+            url=f"{settings.frontend_url}/auth/google/success" 
         )
-        
+
         response.set_cookie(
             key="access_token",
             value=jwt_token,
             httponly=True,
-            secure=True, 
+            secure=False,  
             samesite="lax",
-            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60 
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
-        
+
         return response
 
     except Exception as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": f"Đăng nhập Google thất bại: {str(e)}"}
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/auth/google/error?message={str(e)}"
         )
+
 
 
 @router.get("/me", response_class=JSONResponse)

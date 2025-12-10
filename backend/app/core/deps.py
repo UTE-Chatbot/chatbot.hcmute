@@ -62,6 +62,27 @@ async def get_current_user_flexible(request: Request, db: AsyncSession = Depends
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
+
+async def get_current_user_optional(request: Request, db: AsyncSession = Depends(get_db)):
+    """Get current user from JWT token, returns None if not authenticated"""
+    try:
+        token = request.cookies.get("access_token")
+        if not token:
+            token = request.headers.get("Authorization")
+            if token and token.startswith("Bearer "):
+                token = token.split(" ")[1]
+            else:
+                return None
+        
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = uuid.UUID(payload.get("sub"))
+    except (JWTError, ValueError, AttributeError):
+        return None
+
+    result = await db.execute(select(User).filter(User.id == user_id))
+    user = result.scalar_one_or_none()
+    return user
+
 def require_roles(*roles: RoleEnum):
     def wrapper(user: User = Depends(get_current_user)):
         if user.role not in roles:

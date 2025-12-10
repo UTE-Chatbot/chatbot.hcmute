@@ -74,6 +74,10 @@ class Settings:
     
     datalab_api_key: str = os.getenv("DATALAB_API_KEY", "")
 
-    backend_url: str = os.getenv("BACKEND_URL", "http://localhost:8000")    
+    backend_url: str = os.getenv("BACKEND_URL", "http://localhost:8000")
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+    # Rate Limiting & Thread Settings
+    question_limit_per_day: int = int(os.getenv("QUESTION_LIMIT_PER_DAY", 100))    
 
 settings = Settings()

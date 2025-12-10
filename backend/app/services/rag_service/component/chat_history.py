@@ -49,9 +49,6 @@ class ChatHistory:
 
         return chat_history
 
-    def start_new_session(self):
-        return str(uuid4())
-
     def get_chat_history(self, thread_id: str) -> List[MessageSchema]:
         history_session = self.chat_memory.get_session_history(thread_id)
         messages = history_session.get_messages()

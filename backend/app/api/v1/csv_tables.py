@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_querybuilder import QueryBuilder
-from fastapi_pagination import Page
+from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi.responses import JSONResponse, Response
 from app.services import csv_tables_service
@@ -21,14 +21,15 @@ def serialize_csv_table(table: CSVTable) -> dict:
     return CSVTableResponse.model_validate(table).model_dump(mode="json")
 
 
-@router.get("")
+@router.get("", response_model=Page[CSVTableResponse])
 async def get_csv_tables(
     query=QueryBuilder(CSVTable),
+    params: Params = Depends(),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
-    result = await paginate(db, query)
-    return JSONResponse(content=result.__dict__, status_code=status.HTTP_200_OK)
+    result = await paginate(db, query, params)
+    return result
 
 
 @router.post("")

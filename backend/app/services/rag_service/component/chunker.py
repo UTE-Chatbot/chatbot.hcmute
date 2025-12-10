@@ -88,10 +88,12 @@ class OmniChunker:
 
         chunks = []
         if self.mode == OmniChunkMode.MARKDOWN_HEADING_SPLIT:
+            content = content.replace(CHUNK_DELIMITER, "")
             chunks, content = await self._chunk_by_markdown_heading(content)
 
         elif self.mode == OmniChunkMode.LLM_CHUNK:
-            chunks = await self._chunk_by_llm(content)
+            content = content.replace(CHUNK_DELIMITER, "")
+            chunks, content = await self._chunk_by_llm(content)
 
         elif self.mode == OmniChunkMode.DELIMITER_SPLIT:
             chunks = await self._chunk_by_delimiter(content)
@@ -100,9 +102,6 @@ class OmniChunker:
 
     async def _chunk_by_markdown_heading(self, text: str) -> tuple[List[Document], str]:
         """Split by # H1 headers, merge with delimiter, return chunks and modified content."""
-        # Xóa tất cả delimiter có sẵn trong content
-        clean_text = text.replace(CHUNK_DELIMITER, "")
-        
         headers_to_split_on = [
             ("#", "h1"),
         ]
@@ -112,7 +111,7 @@ class OmniChunker:
             strip_headers=False
         )
 
-        md_header_splits = markdown_splitter.split_text(clean_text)
+        md_header_splits = markdown_splitter.split_text(text)
 
         documents: List[Document] = []
         chunk_contents: List[str] = []
@@ -161,7 +160,7 @@ class OmniChunker:
 
         return documents
 
-    async def _chunk_by_llm(self, text: str) -> List[Document]:
+    async def _chunk_by_llm(self, text: str) -> tuple[List[Document], str]:
         """Chunk using LLM and return consistent document structures."""
         prompt = LLM_CHUNK_PROMPT.format(
             document_name=self.document.name,
@@ -176,6 +175,7 @@ class OmniChunker:
         raw_chunks = response.split(CHUNK_DELIMITER)
 
         documents: List[Document] = []
+        chunk_contents: List[str] = []
 
         for idx, ch in enumerate(raw_chunks):
             ch = ch.strip()
@@ -183,7 +183,8 @@ class OmniChunker:
                 continue
 
             # Chunk with document name
-            chunk_content = ch + "\nTên tài liệu: " + self.document.name + "\n"
+            chunk_content = "Tên tài liệu: " + self.document.name + "\n" + ch 
+            chunk_contents.append(chunk_content)
                 
             documents.append(
                 create_chunk_document(
@@ -194,4 +195,6 @@ class OmniChunker:
                 )
             )
 
-        return documents
+        # Merge chunks with delimiter for content
+        merged_content = response
+        return documents, merged_content

@@ -6,11 +6,27 @@ from typing import List, Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.csv_table import CSVTable
-from backend.app.schemas.csv_tables import CSVTableCreate, CSVTableUpdate
+from app.schemas.csv_tables import CSVTableCreate, CSVTableUpdate
 from app.services.minio_service import get_file_stream
 from app.utils.sql import validate_sql
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '../assets/csv_tables.db')
+
+# Cached schema strings - updated whenever tables change
+_cached_tables_schema: str = ""
+_cached_tables_schema_simple: str = ""
+
+
+def get_cached_tables_schema() -> str:
+    """Get the cached full schema string (with types and unique values)."""
+    return _cached_tables_schema
+
+
+def get_cached_tables_schema_simple() -> str:
+    """Get the cached simple schema string (just table/column names and descriptions)."""
+    return _cached_tables_schema_simple
+
+
 def get_db_connection():
     return duckdb.connect(DB_PATH)
 def execute_sql_query(sql_query: str) -> Union[List[dict], dict]:
@@ -18,10 +34,8 @@ def execute_sql_query(sql_query: str) -> Union[List[dict], dict]:
     try:
         df = conn.execute(sql_query).fetch_df()
         result_dict = df.to_dict(orient='records')
-        print(f"result of <execute_sql>: {result_dict}")
         return result_dict
     except Exception as e:
-        print(f"Error in <execute_sql>: {str(e)}")
         return None 
     finally:
         conn.close()
@@ -42,22 +56,129 @@ async def get_csv_table_by_name(db: AsyncSession, name: str) -> Optional[CSVTabl
     return result.scalar_one_or_none()
 
 
-async def get_all_tables_with_db_schema() -> str:
+async def get_all_tables_with_db_schema(use_cache: bool = True) -> str:
     """
     Lấy tất cả bảng CSV kết hợp với thông tin schema từ DuckDB.
     Trả về mô tả dạng văn bản có cấu trúc của tất cả các bảng và cột.
+    
+    Args:
+        use_cache: If True, returns cached schema. If False, rebuilds from DB.
     """
+    global _cached_tables_schema
+    
+    if use_cache and _cached_tables_schema:
+        return _cached_tables_schema
+    
+    # Refresh cache and return
+    await refresh_cached_schemas()
+    return _cached_tables_schema
+
+
+async def get_all_tables_simple_schema(use_cache: bool = True) -> str:
+    """
+    Lấy tất cả bảng CSV với chỉ tên bảng, tên cột và mô tả.
+    Phiên bản đơn giản hơn, không bao gồm kiểu dữ liệu và giá trị unique.
+    
+    Args:
+        use_cache: If True, returns cached schema. If False, rebuilds from DB.
+    """
+    global _cached_tables_schema_simple
+    
+    if use_cache and _cached_tables_schema_simple:
+        return _cached_tables_schema_simple
+    
+    # Refresh cache and return
+    await refresh_cached_schemas()
+    return _cached_tables_schema_simple
+
+
+def _build_simple_schema(csv_tables: List[CSVTable]) -> str:
+    """Build simple schema string with just table/column names and descriptions."""
+    if not csv_tables:
+        return "Không có bảng nào."
+    
+    output_lines = []
+    for csv_table in csv_tables:
+        clean_table_name = csv_table.name.replace(" ", "_").replace("-", "_")
+        
+        output_lines.append(f'## Bảng: "{clean_table_name}"')
+        if csv_table.description:
+            output_lines.append(f"Mô tả: {csv_table.description}")
+        output_lines.append("")
+        output_lines.append("Các cột:")
+        
+        for col in csv_table.columns:
+            col_name = col.get("name")
+            col_desc = col.get("description", "")
+            col_line = f'  - "{col_name}"'
+            if col_desc:
+                col_line += f": {col_desc}"
+            output_lines.append(col_line)
+        
+        output_lines.append("")
+        output_lines.append("---")
+        output_lines.append("")
+    
+    return "\n".join(output_lines)
+
+
+def _build_full_schema(csv_tables: List[CSVTable], db_schemas: dict) -> str:
+    """Build full schema string with types and unique values."""
+    if not csv_tables:
+        return "Không có bảng nào."
+    
+    output_lines = []
+    for csv_table in csv_tables:
+        clean_table_name = csv_table.name.replace(" ", "_").replace("-", "_")
+        db_columns_info = db_schemas.get(clean_table_name, {})
+        
+        output_lines.append(f'## Bảng: "{clean_table_name}"')
+        if csv_table.description:
+            output_lines.append(f"Mô tả: {csv_table.description}")
+        output_lines.append("")
+        output_lines.append("Các cột:")
+        
+        for col in csv_table.columns:
+            col_name = col.get("name")
+            col_desc = col.get("description", "")
+            col_type = db_columns_info.get(col_name, col.get("type", "UNKNOWN"))
+            is_categorical = col.get("is_categorical", False)
+            unique_values = col.get("unique_values", "")
+           
+            col_line = f'  - "{col_name}" ({col_type})'
+            if col_desc:
+                col_line += f": {col_desc}"
+            output_lines.append(col_line)
+         
+            if is_categorical and unique_values:
+                output_lines.append(f"    Các giá trị có thể: {unique_values}")
+        
+        output_lines.append("")
+        output_lines.append("---")
+        output_lines.append("")
+    
+    return "\n".join(output_lines)
+
+
+async def refresh_cached_schemas():
+    """Refresh both cached schema strings. Call this after any table changes."""
+    global _cached_tables_schema, _cached_tables_schema_simple
+    
     from app.db.session import AsyncSessionLocal
     
     async with AsyncSessionLocal() as db:
-        # Lấy tất cả bảng từ PostgreSQL
         result = await db.execute(select(CSVTable).order_by(CSVTable.id))
         csv_tables = result.scalars().all()
         
         if not csv_tables:
-            return "Không có bảng nào."
+            _cached_tables_schema = "Không có bảng nào."
+            _cached_tables_schema_simple = "Không có bảng nào."
+            return
         
-        # Lấy tất cả schema từ DuckDB
+        # Build simple schema
+        _cached_tables_schema_simple = _build_simple_schema(csv_tables)
+        
+        # Build full schema with DuckDB types
         db_schemas = {}
         try:
             conn = get_db_connection()
@@ -72,41 +193,7 @@ async def get_all_tables_with_db_schema() -> str:
         except Exception:
             pass
         
-        # Xây dựng văn bản đầu ra có cấu trúc
-        output_lines = []
-        
-        for csv_table in csv_tables:
-            clean_table_name = csv_table.name.replace(" ", "_").replace("-", "_")
-            db_columns_info = db_schemas.get(clean_table_name, {})
-            
-            # Tiêu đề bảng (với dấu ngoặc kép để LLM nhận biết tên bảng)
-            output_lines.append(f'## Bảng: "{clean_table_name}"')
-            if csv_table.description:
-                output_lines.append(f"Mô tả: {csv_table.description}")
-            output_lines.append("")
-            
-            # Các cột
-            output_lines.append("Các cột:")
-            for col in csv_table.columns:
-                col_name = col.get("name")
-                col_desc = col.get("description", "")
-                col_type = db_columns_info.get(col_name, col.get("type", "UNKNOWN"))
-                is_categorical = col.get("is_categorical", False)
-                unique_values = col.get("unique_values", "")
-               
-                col_line = f'  - "{col_name}" ({col_type})'
-                if col_desc:
-                    col_line += f": {col_desc}"
-                output_lines.append(col_line)
-             
-                if is_categorical and unique_values:
-                    output_lines.append(f"    Các giá trị có thể: {unique_values}")
-            
-            output_lines.append("")
-            output_lines.append("---")
-            output_lines.append("")
-        
-        return "\n".join(output_lines)
+        _cached_tables_schema = _build_full_schema(csv_tables, db_schemas)
 
 
 def load_csv_dataframe(csv_url: str, **kwargs) -> pd.DataFrame:
@@ -242,3 +329,6 @@ async def rebuild_database():
             os.utime(DB_PATH, None)
     finally:
         conn.close()
+    
+    # Refresh cached schemas after rebuilding database
+    await refresh_cached_schemas()

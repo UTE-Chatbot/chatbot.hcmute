@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_querybuilder import QueryBuilder
-from fastapi_pagination import Page
+from fastapi_pagination import Page, Params
 from typing import List
 from fastapi.responses import JSONResponse, Response
 
@@ -17,11 +17,10 @@ from app.schemas.document import (
     DocumentChunkUpdate,
     DocumentChunkCreate
 )
-from app.services import document_service
+from app.services import document_service, minio_service
 from app.core.deps import require_roles
 from fastapi_pagination.ext.sqlalchemy import paginate
 from app.services.rag_service.component.chunker import OmniChunkMode
-
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -38,14 +37,14 @@ def serialize_chunk(chunk: DocumentChunk) -> dict:
     return DocumentChunkResponse.model_validate(chunk).model_dump(mode="json")
 
 
-@router.get("")
+@router.get("", response_model=Page[DocumentResponse])
 async def get_documents_paginated(
     query=QueryBuilder(Document),
+    params: Params = Depends(),
     session: AsyncSession = Depends(get_db)
 ):
-    result = await paginate(session, query)
-    return JSONResponse(content=result.__dict__, status_code=status.HTTP_200_OK)
-
+    result = await paginate(session, query, params)
+    return result
 @router.post("")
 async def create_document(
     document_data: DocumentCreate,
@@ -54,7 +53,7 @@ async def create_document(
     current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     document = await document_service.create_document(session, document_data, current_user.id)
-    is_enable_parse = (document_data.full_text is None or document_data.full_text == "") and (document_data.file_path is not None and document_data.file_path != "")
+    is_enable_parse = (document_data.file_path is not None and document_data.file_path != "")
     background_tasks.add_task(
         document_service.bg_process_document_pipeline,
         document.id,
@@ -75,39 +74,30 @@ async def get_document(
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy tài liệu")
     return JSONResponse(content=serialize_document(document, request), status_code=status.HTTP_200_OK)
-
+from app.models.document import DocumentStatusEnum
 @router.put("/{document_id}")
 async def update_document(
     document_id: int,
     document_data: DocumentUpdate,
     background_tasks: BackgroundTasks,
-    chunk_mode: str = OmniChunkMode.LLM_CHUNK,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     doc = await document_service.get_document_by_id(session, document_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy tài liệu")
-    
-
     updated_doc = await document_service.update_document_metadata(session, document_id, document_data)
     if not updated_doc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Cập nhật tài liệu thất bại")
-    
-    is_full_text_changed = document_data.full_text is not None and len(document_data.full_text) > 0 and document_data.full_text != doc.full_text
-    is_file_path_changed = document_data.file_path is not None and len(document_data.file_path) > 0 and document_data.file_path != doc.file_path
-    is_failed = doc.status == "FAILED"
-    is_metadata_only_change = not is_full_text_changed and not is_file_path_changed
-    is_enable_parse = is_file_path_changed or is_failed
-    
-    if is_metadata_only_change:
-        chunk_mode = OmniChunkMode.DELIMITER_SPLIT
+    if (document_data.file_path is not None and document_data.file_path != doc.file_path) or (doc.status == DocumentStatusEnum.PARSING_FAILED) or (doc.full_text is None or doc.full_text == "" and doc.file_path is not None and doc.file_path != ""):
+        is_enable_parse = True
+    else:
         is_enable_parse = False
         
     background_tasks.add_task(
-        document_service.bg_update_document_pipeline,
+        document_service.bg_process_document_pipeline,
         document_id,
-        chunk_mode,
+        document_data.chunk_mode or OmniChunkMode.DELIMITER_SPLIT,
         is_enable_parse = is_enable_parse,
     )
     return JSONResponse(content=serialize_document(updated_doc), status_code=status.HTTP_200_OK)
@@ -126,24 +116,30 @@ async def delete_document(
     
     if cleanup_data.get("file_path"):
         background_tasks.add_task(
-            document_service.minio_delete_file, 
+            minio_service.delete_file, 
             cleanup_data["file_path"]
         )
     
+    background_tasks.add_task(
+        document_service.bg_cleanup_deleted_document,
+        cleanup_data.get("point_ids", []),
+        cleanup_data.get("file_path")
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.get("/{document_id}/chunks")
+@router.get("/{document_id}/chunks", response_model=Page[DocumentChunkResponse])
 async def get_document_chunks(
     document_id: int,
     query=QueryBuilder(DocumentChunk),
+    params: Params = Depends(),
     session: AsyncSession = Depends(get_db)
 ):
     if not await document_service.get_document_by_id(session, document_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy tài liệu")
 
     query = query.filter(DocumentChunk.document_id == document_id)
-    result = await paginate(session, query)
-    return JSONResponse(content=result.__dict__, status_code=status.HTTP_200_OK)
+    result = await paginate(session, query, params)
+    return result
 
 @router.post("/{document_id}/chunks")
 async def create_document_chunk(
@@ -199,6 +195,8 @@ async def search_document(
     current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     results = await document_service.search_document(query)
-    return JSONResponse(content={"results": results}, status_code=status.HTTP_200_OK)
-
-    
+    formatted_results = [{"document": {
+                            "page_content": document.page_content,
+                            "metadata": document.metadata
+                         }, "score": score} for document, score in results]
+    return JSONResponse(content=formatted_results, status_code=status.HTTP_200_OK)

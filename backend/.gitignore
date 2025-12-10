@@ -2,6 +2,7 @@
 app/assets/csv/
 app/assets/json
 app/assets/*.db
+*.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

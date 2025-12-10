@@ -7,13 +7,13 @@ import logging
 
 from app.models.document import Document, DocumentStatusEnum
 from app.models.document_chunk import DocumentChunk
-from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentChunkCreate
+from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentChunkCreate, DocumentChunkUpdate
 from app.services.rag_service.component.parser import DocumentParser
 from app.db.vector_db import vector_store
 from langchain_core.documents import Document as VectorDocument
 
 from app.db.session import AsyncSessionLocal
-from app.services.rag_service.component.chunker import OmniChunkMode, OmniChunker
+from app.services.rag_service.component.chunker import OmniChunkMode, OmniChunker, create_chunk_document
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ async def create_document(
     await session.refresh(document)
     return document
 
-async def update_document_metadata(
+async def   update_document_metadata(
     session: AsyncSession,
     document_id: int,
     document_data: DocumentUpdate
@@ -80,9 +80,9 @@ async def update_document_metadata(
     await session.execute(
         delete(DocumentChunk).where(DocumentChunk.document_id == document_id)
     )
+    await session.commit()
     
-    document.full_text = ""
-
+  
     update_data = document_data.model_dump(exclude_unset=True)
     document.status = DocumentStatusEnum.PARSING
     for field, value in update_data.items():
@@ -103,10 +103,34 @@ async def create_document_chunk_db(
     document_id: int,
     chunk_data: DocumentChunkCreate
 ) -> DocumentChunk:
+    document = await get_document_by_id(session, document_id)
+    if not document:
+        return None
+    
+    # Get max chunk_index for this document
+    result = await session.execute(
+        select(DocumentChunk.chunk_index)
+        .where(DocumentChunk.document_id == document_id)
+        .order_by(DocumentChunk.chunk_index.desc())
+        .limit(1)
+    )
+    max_index = result.scalar_one_or_none()
+    new_index = (max_index + 1) if max_index is not None else 0
+    
+    # Create vector document and add to vector store
+    vector_doc = create_chunk_document(
+        content=chunk_data.text,
+        chunk_index=new_index,
+        chunk_method="manual",
+        document=document
+    )
+    point_ids = await vector_store.aadd_documents([vector_doc])
+    
     new_chunk = DocumentChunk(
         document_id=document_id,
-        chunk_index=chunk_data.chunk_index,
+        chunk_index=new_index,
         text=chunk_data.text,
+        point_id=point_ids[0] if point_ids else None
     )
     session.add(new_chunk)
     await session.commit()
@@ -132,49 +156,102 @@ async def delete_chunk_db(session: AsyncSession, chunk_id: int, document_id: int
     if not chunk:
         return None
     
-    point_id = chunk.point_id
+    # Delete from vector store
+    if chunk.point_id:
+        try:
+            await vector_store.adelete(ids=[chunk.point_id])
+        except Exception as e:
+            logger.error(f"Error deleting chunk {chunk_id} from vector store: {str(e)}")
+    
     await session.delete(chunk)
     await session.commit()
-    return point_id
+    return chunk.point_id
+
+async def update_document_chunk_db(
+    session: AsyncSession,
+    chunk_id: int,
+    document_id: int,
+    chunk_data: DocumentChunkUpdate
+) -> Optional[DocumentChunk]:
+    chunk = await get_chunk_by_id(session, chunk_id, document_id)
+    if not chunk:
+        return None
+    
+    document = await get_document_by_id(session, document_id)
+    if not document:
+        return None
+    
+    # Update text if provided
+    if chunk_data.text is not None:
+        chunk.text = chunk_data.text
+        
+        # Delete old vector and create new one
+        if chunk.point_id:
+            try:
+                await vector_store.adelete(ids=[chunk.point_id])
+            except Exception as e:
+                logger.error(f"Error deleting old vector for chunk {chunk_id}: {str(e)}")
+        
+        # Create new vector document
+        vector_doc = create_chunk_document(
+            content=chunk_data.text,
+            chunk_index=chunk.chunk_index,
+            chunk_method="manual",
+            document=document
+        )
+        point_ids = await vector_store.aadd_documents([vector_doc])
+        chunk.point_id = point_ids[0] if point_ids else None
+    
+    await session.commit()
+    await session.refresh(chunk)
+    return chunk
+
 async def chunk_document(document_id: int, chunk_mode: OmniChunkMode) -> List[VectorDocument]:
     """Chunk document and store in vector DB."""
     async with AsyncSessionLocal() as session: 
         document = await get_document_by_id(session, document_id)
         if not document:
-            return 
+            return  
         
-        chunker = OmniChunker(
-            overlap=200,
-            mode=chunk_mode,
-            document=document,
-            is_replace_large_table=True
-        )
-        
-        document.status = DocumentStatusEnum.INDEXING
-        await session.commit()
-        chunks, content = await chunker.chunk_document(document.full_text or "")
-        document.full_text = content
-        await session.commit()
-        
-        document_chunks: List[DocumentChunk] = []
-        vector_chunks: List[VectorDocument] = []
-        for idx, chunk_item in enumerate(chunks):
-            doc_chunk = DocumentChunk(
-                document_id=document.id,
-                chunk_index=idx,
-                text=chunk_item.page_content
+        try:
+            chunker = OmniChunker(
+                overlap=200,
+                mode=chunk_mode,
+                document=document,
+                is_replace_large_table=True
             )
             
-            document_chunks.append(doc_chunk)
-            vector_chunks.append(chunk_item)
-        if vector_chunks:
-            point_ids = await vector_store.aadd_documents(vector_chunks)
-            for doc_chunk, pid in zip(document_chunks, point_ids):
-                doc_chunk.point_id = pid
-        session.add_all(document_chunks)
-        document.status = DocumentStatusEnum.INDEXED
-        await session.commit()
-        logger.info(f"Document {document_id} chunked successfully.")
+            document.status = DocumentStatusEnum.INDEXING
+            await session.commit()
+            chunks, content = await chunker.chunk_document()
+            document.full_text = content
+            await session.commit()
+            
+            document_chunks: List[DocumentChunk] = []
+            vector_chunks: List[VectorDocument] = []
+            for idx, chunk_item in enumerate(chunks):
+                doc_chunk = DocumentChunk(
+                    document_id=document.id,
+                    chunk_index=idx,
+                    text=chunk_item.page_content
+                )
+                
+                document_chunks.append(doc_chunk)
+                vector_chunks.append(chunk_item)
+            if vector_chunks:
+                point_ids = await vector_store.aadd_documents(vector_chunks)
+                for doc_chunk, pid in zip(document_chunks, point_ids):
+                    doc_chunk.point_id = pid
+            session.add_all(document_chunks)
+            document.status = DocumentStatusEnum.INDEXED
+            await session.commit()
+            logger.info(f"Document {document_id} chunked successfully.")
+        except Exception as e:
+            logger.error(f"Error chunking document {document_id}: {str(e)}")
+            await session.rollback()
+            document.status = DocumentStatusEnum.CHUNKING_FAILED
+            session.add(document)
+            await session.commit()
                 
                 
 async def parse_document(document_id: int) -> bool:
@@ -198,14 +275,13 @@ async def parse_document(document_id: int) -> bool:
         except Exception as e:
             logger.error(f"Error parsing document {document_id}: {str(e)}")
             await session.rollback()
-            document.status = DocumentStatusEnum.FAILED
+            document.status = DocumentStatusEnum.PARSING_FAILED
             session.add(document)
             await session.commit()
             return False
 
 async def bg_process_document_pipeline(document_id: int, chunk_mode: str, is_enable_parse: bool = False):
-    
-    with AsyncSessionLocal() as session:
+    async with AsyncSessionLocal() as session:
         document = await get_document_by_id(session, document_id)
         if not document:
             return

@@ -51,9 +51,9 @@ class DocumentParser:
                                 tmp_img_path = tmp_img.name
 
                             upload_result = upload_file(
-                                file_path=tmp_img_path,
-                                storage_prefix=self.storage_prefix,
-                                original_filename=img_filename
+                                path=tmp_img_path,
+                                prefix=self.storage_prefix,
+                                filename=img_filename
                             )
                             public_url = upload_result['public_url']
                             self.uploaded_map[embed_code] = public_url
@@ -95,7 +95,7 @@ class DocumentParser:
             disable_image_extraction=True
         )
         temp_output_dir = tempfile.mkdtemp(prefix="datalab_output_")
-        result = await client._async_client.convert(file_path)
+        result = await client._async_client.convert(file_path, options=options)
         result.save_output(temp_output_dir, save_images=False)
         return result.markdown, temp_output_dir
 

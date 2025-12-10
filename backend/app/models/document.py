@@ -10,13 +10,14 @@ class DocumentStatusEnum(str, enum.Enum):
     READY = "ready"   
     INDEXING = "indexing"       
     INDEXED = "indexed"          
-    FAILED = "failed"    
+    PARSING_FAILED = "parsing_failed"
+    CHUNKING_FAILED = "chunking_failed"
 
 class Document(Base, BaseModel):
     __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     name = Column(Text, nullable=False)
     full_text = Column(Text, nullable=True)
     file_path = Column(Text, nullable=True)
