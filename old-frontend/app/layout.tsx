@@ -4,6 +4,8 @@ import { ThemeToggle } from "@/components/providers/theme-toggle";
 import { cn, constructMetadata } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./tiptap.css";
+import "katex/dist/katex.min.css";
 import VisitorProvider from "@/components/providers/visitor-provider";
 import AuthProvider from "@/components/providers/auth-provider";
 

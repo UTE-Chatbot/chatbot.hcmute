@@ -78,6 +78,6 @@ class Settings:
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     # Rate Limiting & Thread Settings
-    question_limit_per_day: int = int(os.getenv("QUESTION_LIMIT_PER_DAY", 100))    
+    question_limit_per_day: int = int(os.getenv("QUESTION_LIMIT_PER_DAY", 20))    
 
 settings = Settings()

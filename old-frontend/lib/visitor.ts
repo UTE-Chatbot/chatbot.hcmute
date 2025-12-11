@@ -1,4 +1,4 @@
-// utils/visitor.ts
+ // utils/visitor.ts
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 class Visitor {

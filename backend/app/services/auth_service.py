@@ -35,6 +35,11 @@ async def login_google(db: AsyncSession, google_data: UserGoogleCreate):
     result = await db.execute(select(User).filter(User.google_id == google_data.google_id))
     user = result.scalar_one_or_none()
     if user:
+        # Update avatar if it changed
+        if google_data.avatar and user.avatar != google_data.avatar:
+            user.avatar = google_data.avatar
+            await db.commit()
+            await db.refresh(user)
         return user
 
     # Check if user exists with this email

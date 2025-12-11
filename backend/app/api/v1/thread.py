@@ -26,21 +26,25 @@ from app.core.deps import require_roles, get_current_user_optional
 from app.core.config import settings
 from app.models.user import RoleEnum, User
 from app.models.thread import Thread
-
+from uuid import UUID
 router = APIRouter(prefix="/threads", tags=["Threads"])
 chat_router = APIRouter(tags=["Chat"])
 
 
 def get_client_id(
      request: Request, current_user: Optional[User] = None,   body: Optional[ThreadCreate] = None,) -> str:
-    client_id = None
     if current_user:
-        client_id = str(current_user.id)    
-    else: 
-        client_id = "mock-client-id-001"
-    # elif request.headers.get("X-Client-ID"):
-    #     client_id = request.headers.get("X-Client-ID")
-    return client_id
+        return str(current_user.id)
+
+    visitor_id = request.headers.get("X-Visitor-ID")
+    if visitor_id:
+        try:
+            uuid_obj = UUID(visitor_id)
+            return str(uuid_obj)
+        except ValueError:
+            return None
+
+    return None
     
 @router.get("", response_model=Page[ThreadResponse])
 async def list_threads(
@@ -164,7 +168,7 @@ async def stream_response(
 
     await thread_service.set_thread_title_from_first_question(db, thread_id, user_question)
     
-    client_id = get_client_id(request, current_user)
+    client_id = get_client_id(raw_request, current_user)
     is_admin = current_user and current_user.role == RoleEnum.ADMIN
     
     allowed, remaining = await thread_service.check_rate_limit(
@@ -179,7 +183,7 @@ async def stream_response(
         minutes = (remaining % 3600) // 60
         seconds = remaining % 60
         
-        error_msg = f"Hôm nay bạn đã hỏi đạt giới hạn câu hỏi. Còn lại {hours} giờ {minutes} phút {seconds} giây nữa nhé 😉"
+        error_msg = f"Ôi, mình đang nghỉ xíu để nạp năng lượng ⚡. Đợi mình sau {hours} giờ {minutes} phút {seconds} giây nha 💖"
         
         async def limit_stream():
             yield error_msg

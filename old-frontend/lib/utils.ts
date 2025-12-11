@@ -94,3 +94,11 @@ export function formatDate(date: string) {
     return `${fullDate} (${yearsAgo}y ago)`;
   }
 }
+
+export function isAdmin(user: { role: string } | null | undefined): boolean {
+  return user?.role === "ADMIN" || user?.role === "admin";
+}
+
+export function isUser(user: { role: string } | null | undefined): boolean {
+  return user?.role === "USER" || user?.role === "user";
+}

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { getUserProfile } from "@/services/auth.service";
+import { getUserProfile, logout as logoutApi } from "@/services/auth.service";
 import { create } from "zustand";
 
 type User = {
@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: async () => {
     try {
-      await getUserProfile();
+      await logoutApi();
     } catch (_) {}
 
     set({ user: null });

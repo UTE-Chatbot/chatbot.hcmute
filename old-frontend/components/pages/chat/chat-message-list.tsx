@@ -33,6 +33,7 @@ import { useStickToBottomContext } from "use-stick-to-bottom";
 import ChatPromptInput from "@/components/pages/chat/prompt-input";
 import { type PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { UIMessage } from "ai";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 
 const getYoutubeId = (url: string) => {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -185,8 +186,8 @@ const ChatMessageList = ({
             <Message from="assistant" key="loading">
               <div className="flex h-full items-center gap-2">
                 <Loader className="h-auto w-auto" spinnerClassName="h-4 w-4" />
-                <span className="text-muted-foreground text-sm italic">
-                  Đợi mình một chút nha…
+                <span className="text-muted-foreground text-sm ">
+                  <Shimmer>Mình đang suy nghĩ</Shimmer>
                 </span>
               </div>
             </Message>

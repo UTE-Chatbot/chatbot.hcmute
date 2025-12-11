@@ -1,0 +1,366 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Database, Plus, X, Upload, FileSpreadsheet } from "lucide-react";
+import { uploadFile } from "@/services/file.service";
+import { createCSVTable } from "@/services/csv_table.service";
+import type { CSVTableCreate as CSVTableCreateType, CSVTableColumnInput } from "@/types/csv-table";
+import { ColumnType } from "@/types/csv-table";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface CSVTableCreateProps {
+  onSuccess?: () => void;
+}
+
+export function CSVTableCreate({ onSuccess }: CSVTableCreateProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [columns, setColumns] = useState<CSVTableColumnInput[]>([
+    { name: "", type: ColumnType.TEXT, description: "", is_categorical: false },
+  ]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      // Validate file type
+      if (!selectedFile.name.endsWith('.csv')) {
+        setError("Vui lòng chọn file CSV");
+        return;
+      }
+      setFile(selectedFile);
+      if (!name) {
+        setName(selectedFile.name.replace('.csv', ''));
+      }
+      
+      // Parse CSV headers to auto-generate columns
+      parseCSVHeaders(selectedFile);
+    }
+  };
+
+  const parseCSVHeaders = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const firstLine = text.split('\n')[0];
+      const headers = firstLine.split(',').map(h => h.trim());
+      
+      if (headers.length > 0) {
+        const newColumns = headers.map(header => ({
+          name: header,
+          type: ColumnType.TEXT,
+          description: "",
+          is_categorical: false,
+        }));
+        setColumns(newColumns);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleRemoveFile = () => {
+    setFile(null);
+  };
+
+  const handleAddColumn = () => {
+    setColumns([
+      ...columns,
+      { name: "", type: ColumnType.TEXT, description: "", is_categorical: false },
+    ]);
+  };
+
+  const handleRemoveColumn = (index: number) => {
+    if (columns.length <= 1) return;
+    setColumns(columns.filter((_, i) => i !== index));
+  };
+
+  const handleColumnChange = (
+    index: number,
+    field: keyof CSVTableColumnInput,
+    value: string | boolean
+  ) => {
+    const newColumns = [...columns];
+    newColumns[index] = { ...newColumns[index], [field]: value };
+    setColumns(newColumns);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Validation
+    if (!name.trim()) {
+      setError("Vui lòng nhập tên bảng dữ liệu");
+      return;
+    }
+
+    if (!file) {
+      setError("Vui lòng tải lên file CSV");
+      return;
+    }
+
+    const validColumns = columns.filter((col) => col.name.trim() !== "");
+    if (validColumns.length === 0) {
+      setError("Vui lòng thêm ít nhất một cột");
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+
+      // Upload CSV file
+      const fileUrl = await uploadFile(file);
+
+      // Create CSV table
+      const tableData: CSVTableCreateType = {
+        name: name.trim(),
+        url: fileUrl,
+        description: description.trim() || undefined,
+        columns: validColumns,
+      };
+
+      await createCSVTable(tableData);
+
+      // Reset form
+      setFile(null);
+      setName("");
+      setDescription("");
+      setColumns([
+        { name: "", type: ColumnType.TEXT, description: "", is_categorical: false },
+      ]);
+
+      onSuccess?.();
+    } catch (err) {
+      console.error("Error creating CSV table:", err);
+      setError("Không thể tạo bảng dữ liệu. Vui lòng thử lại.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Tạo bảng dữ liệu CSV mới</h2>
+        <p className="text-muted-foreground mt-1">
+          Tải lên file CSV và định nghĩa cấu trúc các cột
+        </p>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Table Name */}
+          <div className="space-y-2">
+            <Label htmlFor="table-name">Tên bảng *</Label>
+            <Input
+              id="table-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ví dụ: student_enrollment"
+              disabled={isCreating}
+            />
+          </div>
+
+          {/* CSV File Upload */}
+          <div className="space-y-2">
+            <Label>Tải lên file CSV *</Label>
+            {!file ? (
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-muted-foreground/50 transition-colors">
+                <label
+                  htmlFor="csv-upload"
+                  className="flex flex-col items-center cursor-pointer"
+                >
+                  <Upload className="w-10 h-10 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">
+                    Nhấp để chọn file CSV hoặc kéo thả file vào đây
+                  </span>
+                  <span className="text-xs text-muted-foreground mt-1">
+                    Cột sẽ được tự động phát hiện từ header
+                  </span>
+                  <input
+                    id="csv-upload"
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept=".csv"
+                    disabled={isCreating}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                <FileSpreadsheet className="w-8 h-8 text-primary" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(file.size / 1024).toFixed(2)} KB
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveFile}
+                  disabled={isCreating}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Mô tả</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Mô tả về bảng dữ liệu..."
+              rows={3}
+              disabled={isCreating}
+            />
+          </div>
+
+          {/* Columns */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Các cột *</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddColumn}
+                disabled={isCreating}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Thêm cột
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {columns.map((column, index) => (
+                <div key={index} className="p-4 border rounded-lg bg-card">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Cột {index + 1}</span>
+                      {columns.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveColumn(index)}
+                          disabled={isCreating}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Tên cột</Label>
+                        <Input
+                          value={column.name}
+                          onChange={(e) =>
+                            handleColumnChange(index, "name", e.target.value)
+                          }
+                          placeholder="student_id"
+                          disabled={isCreating}
+                          size={1}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Kiểu dữ liệu</Label>
+                        <Select
+                          value={column.type}
+                          onValueChange={(value) =>
+                            handleColumnChange(index, "type", value)
+                          }
+                          disabled={isCreating}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={ColumnType.TEXT}>TEXT</SelectItem>
+                            <SelectItem value={ColumnType.BIGINT}>BIGINT</SelectItem>
+                            <SelectItem value={ColumnType.DECIMAL}>DECIMAL</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs">Mô tả</Label>
+                      <Input
+                        value={column.description}
+                        onChange={(e) =>
+                          handleColumnChange(index, "description", e.target.value)
+                        }
+                        placeholder="Mô tả về cột này..."
+                        disabled={isCreating}
+                        size={1}
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`categorical-${index}`}
+                        checked={column.is_categorical}
+                        onCheckedChange={(checked: boolean) =>
+                          handleColumnChange(index, "is_categorical", checked === true)
+                        }
+                        disabled={isCreating}
+                      />
+                      <Label
+                        htmlFor={`categorical-${index}`}
+                        className="text-xs font-normal cursor-pointer"
+                      >
+                        Dữ liệu phân loại (categorical)
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <Button type="submit" className="w-full" disabled={isCreating}>
+            {isCreating ? (
+              <>
+                <Database className="w-4 h-4 mr-2 animate-pulse" />
+                Đang tạo...
+              </>
+            ) : (
+              <>
+                <Database className="w-4 h-4 mr-2" />
+                Tạo bảng dữ liệu
+              </>
+            )}
+          </Button>
+        </form>
+      </div>
+  );
+}

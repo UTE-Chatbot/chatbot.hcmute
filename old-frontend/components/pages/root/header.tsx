@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, isAdmin } from "@/lib/utils";
 import { signInWithGoogle } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { ArrowRightIcon, LogOut } from "lucide-react";
@@ -69,12 +69,22 @@ export default function Header() {
     return () => observer.disconnect();
   }, []);
 
+  const [showChatButton, setShowChatButton] = useState(false);
+
   useEffect(() => {
     const handleScroll = () => {
+      // Show addBorder if scrolled slightly
       if (window.scrollY > 20) {
         setAddBorder(true);
       } else {
         setAddBorder(false);
+      }
+
+      // Show Chat Button if scrolled past first section (approx 500px or viewport height)
+      if (window.scrollY > 500) {
+        setShowChatButton(true);
+      } else {
+        setShowChatButton(false);
       }
     };
 
@@ -88,7 +98,9 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className={"sticky top-0 z-50 py-2 bg-background/60 backdrop-blur"}
+      className={
+        "sticky top-0 z-50 py-2 border-b !border-[1px] bg-background/60 backdrop-blur"
+      }
     >
       <div className="flex justify-between items-center container mx-auto">
         <div className="flex items-center">
@@ -100,11 +112,26 @@ export default function Header() {
             <img
               src="/logo/square-logo.png"
               alt="Logo"
-              className="w-auto h-[40px]"
+              className="hidden lg:block w-auto h-[40px]"
+            />
+            <img
+              src="/logo/rectangle.png"
+              alt="Logo"
+              className="block lg:hidden w-auto h-[40px]"
             />
           </Link>
-          <nav className="mr-10 hidden lg:block">
+          <nav className="mr-10 hidden lg:flex items-center gap-2">
             <Menu />
+            {isAdmin(user) && (
+              <Link href="/admin">
+                <Button
+                  variant="outline"
+                  className="rounded-3xl cursor-pointer "
+                >
+                  Quản lý
+                </Button>
+              </Link>
+            )}
           </nav>
         </div>
         <div className="hidden lg:block">
@@ -186,15 +213,23 @@ export default function Header() {
           </div>
         </div>
         <div className="mt-2 cursor-pointer block lg:hidden">
-          <Drawer />
+          {pathname === "/" && showChatButton ? (
+            <Link href="/chat">
+              <Button size="sm" className="rounded-3xl cursor-pointer">
+                Hỏi đáp ngay
+              </Button>
+            </Link>
+          ) : (
+            <Drawer />
+          )}
         </div>
       </div>
-      <hr
+      {/* <hr
         className={cn(
           "absolute w-full bottom-0 transition-opacity duration-300 ease-in-out",
           addBorder ? "opacity-100" : "opacity-0"
         )}
-      />
+      /> */}
     </header>
   );
 }
