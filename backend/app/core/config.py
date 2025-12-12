@@ -1,5 +1,6 @@
 import os
 from typing import List
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
 
 env = os.getenv("ENV", "development")  
@@ -25,18 +26,22 @@ class Settings:
     postgres_db: str = os.getenv("POSTGRES_DB", "")
     postgres_host: str = os.getenv("POSTGRES_HOST", "")
     postgres_port: str = os.getenv("POSTGRES_PORT", "")
+    
+    # URL-encode password to handle special characters like @
+    _encoded_password: str = quote_plus(postgres_password)
+    
     database_url: str = (
-        f"postgresql+asyncpg://{postgres_user}:{postgres_password}"
+        f"postgresql+asyncpg://{postgres_user}:{_encoded_password}"
         f"@{postgres_host}:{postgres_port}/{postgres_db}"
     )
     # Sync database URL for Alembic migrations
     database_url_sync: str = (
-        f"postgresql+psycopg2://{postgres_user}:{postgres_password}"
+        f"postgresql+psycopg2://{postgres_user}:{_encoded_password}"
         f"@{postgres_host}:{postgres_port}/{postgres_db}"
     )
 
     database_url_no_asyncpg: str = (
-    f"postgresql://{postgres_user}:{postgres_password}"
+    f"postgresql://{postgres_user}:{_encoded_password}"
     f"@{postgres_host}:{postgres_port}/{postgres_db}"
 )
 
@@ -79,5 +84,8 @@ class Settings:
 
     # Rate Limiting & Thread Settings
     question_limit_per_day: int = int(os.getenv("QUESTION_LIMIT_PER_DAY", 20))    
+
+    # Maintenance Mode
+    maintenance_mode: bool = os.getenv("MAINTENANCE_MODE", "false").lower() in ("true", "1", "t")
 
 settings = Settings()

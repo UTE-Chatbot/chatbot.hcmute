@@ -8,9 +8,14 @@ from sqlalchemy import select
 from app.models.csv_table import CSVTable
 from app.schemas.csv_tables import CSVTableCreate, CSVTableUpdate
 from app.services.minio_service import get_file_stream
+from pathlib import Path
 from app.utils.sql import validate_sql
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '../assets/csv_tables.db')
+# Use pathlib for robust path handling
+START_DIR = Path(__file__).resolve().parent
+APP_DIR = START_DIR.parent
+ASSETS_DIR = APP_DIR / "assets"
+DB_PATH = str(ASSETS_DIR / "csv_tables.db")
 
 # Cached schema strings - updated whenever tables change
 _cached_tables_schema: str = ""
@@ -44,6 +49,14 @@ def execute_sql_query(sql_query: str) -> Union[List[dict], dict]:
 async def get_all_csv_tables(db: AsyncSession) -> List[CSVTable]:
     result = await db.execute(select(CSVTable).order_by(CSVTable.id))
     return result.scalars().all()
+
+
+async def get_db_schema_from_database(db: AsyncSession) -> List[CSVTable]:
+    """
+    Get all CSV tables from database.
+    This function satisfies the requirement for the schema endpoint.
+    """
+    return await get_all_csv_tables(db)
 
 
 async def get_csv_table_by_id(db: AsyncSession, table_id: int) -> Optional[CSVTable]:
@@ -204,8 +217,13 @@ def load_csv_dataframe(csv_url: str, **kwargs) -> pd.DataFrame:
     if csv_url.startswith("http://") or csv_url.startswith("https://"):
         return pd.read_csv(csv_url, **kwargs)
     else:
-        csv_path = os.path.join(os.path.dirname(__file__), '../assets/csv', csv_url)
-        if not os.path.exists(csv_path):
+        # Use simple reliable relative path
+        current_dir = Path(__file__).resolve().parent
+        # Go up to app, then to assets/csv
+        # app/services -> app -> assets/csv
+        csv_path = current_dir.parent / "assets" / "csv" / csv_url
+        
+        if not csv_path.exists():
             raise FileNotFoundError(f"CSV file not found: {csv_path}")
         return pd.read_csv(csv_path, **kwargs)
 

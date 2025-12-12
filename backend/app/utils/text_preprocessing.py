@@ -5,7 +5,7 @@ import math
 import numpy as np
 from pathlib import Path
 
-CURRENT_DIR = Path(__file__).parent
+CURRENT_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = CURRENT_DIR.parent / "assets" / "csv" / "datasets"
 STOPWORDS_FILE = ASSETS_DIR / "vietnamese-stopwords.csv"
 

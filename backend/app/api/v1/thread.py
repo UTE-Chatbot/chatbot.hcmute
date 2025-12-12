@@ -166,6 +166,19 @@ async def stream_response(
     db: AsyncSession = Depends(get_db),
     x_client_id: Optional[str] = Header(None) 
 ):
+
+
+    maintainance_msg = f"Hiện tại mình đang nâng cấp, bạn trở lại sau nha. "
+    
+    async def maintainance_stream():
+        yield maintainance_msg
+    
+    if settings.maintenance_mode:
+        return StreamingResponse(
+            maintainance_stream(),
+            media_type="text/plain"
+        )
+
     thread = await thread_service.get_thread_by_id(db, thread_id)
     if not thread:
         raise HTTPException(

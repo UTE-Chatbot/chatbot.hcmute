@@ -1,3 +1,4 @@
+import time
 from functools import lru_cache
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient, models
@@ -11,7 +12,9 @@ def get_qdrant_store(
     client: QdrantClient, 
     collection_name: str, 
     dense_embedding: Embeddings = None, 
-    sparse_embedding: SparseEmbeddings = None
+    sparse_embedding: SparseEmbeddings = None,
+    max_retries: int = 10,
+    retry_delay: int = 3
 ) -> QdrantVectorStore:
     retrieval_mode = mode
     if retrieval_mode == RetrievalMode.DENSE:
@@ -26,7 +29,19 @@ def get_qdrant_store(
     else:
         raise ValueError(f"Invalid mode: {mode}. Must be RetrievalMode.DENSE, SPARSE, or HYBRID")
 
-    if not client.collection_exists(collection_name):
+    # Retry logic for Qdrant connection
+    for attempt in range(max_retries):
+        try:
+            collection_exists = client.collection_exists(collection_name)
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"Qdrant connection attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                raise RuntimeError(f"Failed to connect to Qdrant after {max_retries} attempts") from e
+
+    if not collection_exists:
         print(f"Collection '{collection_name}' not found. Creating for {mode} mode...")
         
         vectors_config = {}

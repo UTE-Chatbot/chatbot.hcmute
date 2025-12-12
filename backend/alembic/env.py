@@ -10,8 +10,8 @@ from app.core.config import settings
 
 config = context.config
 
-# Use the synchronous database URL for Alembic
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
+# Note: We don't set sqlalchemy.url in config to avoid configparser % interpolation issues
+# Instead, we pass the URL directly to create_engine in run_migrations_online()
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -20,7 +20,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = settings.database_url_sync
     context.configure(
         url=url,
         target_metadata=target_metadata,

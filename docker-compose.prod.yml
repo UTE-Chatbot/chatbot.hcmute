@@ -9,36 +9,130 @@ services:
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
     expose:
-      - "5432"
+      - "5432:5432"
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - prod_network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  marker:
-    container_name: marker
+  backend:
+    container_name: backend_prod
     build:
-      context: ./service/marker
+      context: ./backend
       dockerfile: Dockerfile
     restart: always
-    expose:
-      - "8001"
+    env_file:
+      - ./backend/.env.production
+    environment:
+      - ENV=production
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - QDRANT_URL=http://qdrant:6333
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=chatbot_ute
+      - MINIO_SECRET_KEY=Tuyensinh@spkt
+    ports:
+      - "8386:8386"
+    networks:
+      - prod_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+
+  frontend:
+    container_name: frontend_prod
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./ssl:/etc/nginx/ssl
+    env_file:
+      - ./frontend/.env.production
+    ports:
+      - "3000:3000"
+    networks:
+      - prod_network
+    depends_on:
+      - backend
+
+  minio:
+    container_name: minio
+    image: minio/minio:latest
+    restart: always
+    env_file:
+      - ./backend/.env.production
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - prod_network
+    command: server --console-address ":9001" /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
     networks:
       - prod_network
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
-      interval: 30s
+      test:
+        ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 10s
       timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - prod_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 3
 
 volumes:
   pgdata:
-
+  minio_data:
+  qdrant_data:
+  redis_data:
 
 networks:
   prod_network:
