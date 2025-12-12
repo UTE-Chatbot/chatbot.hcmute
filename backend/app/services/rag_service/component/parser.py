@@ -9,7 +9,7 @@ from markitdown import MarkItDown
 from app.core.config import settings
 from app.services.minio_service import upload_file
 from app.utils.tmp import download_temp_file
-
+from uuid import uuid4
 
 class DocumentParser:
     def __init__(self, storage_prefix="parser-uploads"):
@@ -45,7 +45,7 @@ class DocumentParser:
                             
                             content_type = image_part.content_type
                             ext = content_type.split('/')[-1] if '/' in content_type else "png"
-                            img_filename = f"{doc_stem}_extracted_image.{ext}"
+                            img_filename = f"{doc_stem}-{uuid4()}-.{ext}"
                             with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp_img:
                                 tmp_img.write(image_bytes)
                                 tmp_img_path = tmp_img.name

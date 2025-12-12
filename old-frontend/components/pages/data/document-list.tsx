@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getDocuments, deleteDocument, searchChunks, deleteDocumentChunk, updateDocumentChunk } from "@/services/document.service";
+import {
+  getDocuments,
+  deleteDocument,
+  searchChunks,
+  deleteDocumentChunk,
+  updateDocumentChunk,
+} from "@/services/document.service";
 import { getTopics } from "@/services/topic.service";
 import {
   DocumentResponse,
@@ -79,6 +85,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { TopicData } from "@/types/topic";
 import { JSONSchema } from "zod/v4/core";
+import { Streamdown } from "streamdown";
 
 // Chunk Search Card Component
 interface ChunkSearchCardProps {
@@ -113,7 +120,7 @@ function ChunkSearchCard({ result, onEdit, onDelete }: ChunkSearchCardProps) {
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow bg-white">
-      <CardHeader className="pb-3">
+      <CardHeader className="!pb-0">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1">
             <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -139,10 +146,10 @@ function ChunkSearchCard({ result, onEdit, onDelete }: ChunkSearchCardProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div className="text-sm bg-muted p-3 rounded-lg font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
-            {result.document.page_content}
+      <CardContent className="!pt-0">
+        <div className=" space-y-3">
+          <div className="border-1 rounded-3xl p-3 max-h-48 overflow-y-auto">
+            <Streamdown>{result.document.page_content}</Streamdown>
           </div>
           <div className="flex gap-2">
             <Button
@@ -181,7 +188,9 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
 
   // Chunk Search Mode
   const [chunkSearchMode, setChunkSearchMode] = useState(false);
-  const [chunkSearchResults, setChunkSearchResults] = useState<ChunkSearchResult[]>([]);
+  const [chunkSearchResults, setChunkSearchResults] = useState<
+    ChunkSearchResult[]
+  >([]);
   const [isSearchingChunks, setIsSearchingChunks] = useState(false);
   const [chunkSearchQuery, setChunkSearchQuery] = useState("");
 
@@ -223,6 +232,10 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
   const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(
     null
   );
+  const [deletingChunk, setDeletingChunk] = useState<{
+    documentId: number;
+    chunkId: number;
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -328,7 +341,11 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
     fetchData();
   };
 
-  const handleChunkEdit = async (documentId: number, chunkId: number, text: string) => {
+  const handleChunkEdit = async (
+    documentId: number,
+    chunkId: number,
+    text: string
+  ) => {
     setEditingChunkData({ documentId, chunkId, text });
   };
 
@@ -339,10 +356,18 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
   };
 
   const handleChunkDelete = async (documentId: number, chunkId: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa chunk này?")) return;
+    setDeletingChunk({ documentId, chunkId });
+  };
+
+  const handleConfirmChunkDelete = async () => {
+    if (!deletingChunk) return;
 
     try {
-      await deleteDocumentChunk(documentId, chunkId);
+      await deleteDocumentChunk(
+        deletingChunk.documentId,
+        deletingChunk.chunkId
+      );
+      setDeletingChunk(null);
       // Refresh search results
       handleChunkSearch();
     } catch (err) {
@@ -532,7 +557,7 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
                   value={chunkSearchQuery}
                   onChange={(e) => setChunkSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       handleChunkSearch();
                     }
                   }}
@@ -542,7 +567,7 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
                   <Search />
                 </InputGroupAddon>
               </InputGroup>
-              <Button 
+              <Button
                 onClick={handleChunkSearch}
                 disabled={isSearchingChunks || !chunkSearchQuery.trim()}
               >
@@ -568,13 +593,16 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
           )}
 
           {/* Chunk Search Toggle */}
-          <div className="flex items-center gap-2 whitespace-nowrap">
+          <div className="flex items-center  gap-2 whitespace-nowrap">
             <Switch
               id="chunk-search-mode"
               checked={chunkSearchMode}
               onCheckedChange={setChunkSearchMode}
             />
-            <Label htmlFor="chunk-search-mode" className="text-sm cursor-pointer">
+            <Label
+              htmlFor="chunk-search-mode"
+              className="text-sm cursor-pointer"
+            >
               Tìm chunks
             </Label>
           </div>
@@ -590,128 +618,58 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
                   className="w-full sm:w-[200px] justify-between"
                 >
                   {selectedTopic
-                  ? selectedTopic === "all"
-                    ? "Tất cả chủ đề"
-                    : selectedTopic
-                  : "Lọc theo chủ đề"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0">
-              <Command>
-                <CommandInput placeholder="Tìm chủ đề..." />
-                <CommandList>
-                  <CommandEmpty>Không tìm thấy.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      value="all"
-                      onSelect={() => {
-                        setSelectedTopic("");
-                        setSelectedSubtopic(""); // Reset subtopic
-                        setTopicOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedTopic === "" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      Tất cả chủ đề
-                    </CommandItem>
-                    {Object.keys(topicsData).map((t) => (
-                      <CommandItem
-                        key={t}
-                        value={t}
-                        onSelect={(currentValue) => {
-                          const newTopic =
-                            currentValue === selectedTopic ? "" : currentValue;
-                          setSelectedTopic(newTopic);
-                          if (newTopic !== selectedTopic) {
-                            setSelectedSubtopic(""); // Reset subtopic when topic changes
-                          }
-                          setTopicOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedTopic === t ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {t}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          )}
-
-          {/* Subtopic Filter */}
-          {!chunkSearchMode && selectedTopic && availableSubtopics.length > 0 && (
-            <Popover open={subtopicOpen} onOpenChange={setSubtopicOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={subtopicOpen}
-                  className="w-full sm:w-[200px] justify-between"
-                >
-                  {selectedSubtopic
-                    ? selectedSubtopic === "all"
-                      ? "Tất cả chủ đề phụ"
-                      : selectedSubtopic
-                    : "Lọc theo chủ đề phụ"}
+                    ? selectedTopic === "all"
+                      ? "Tất cả chủ đề"
+                      : selectedTopic
+                    : "Lọc theo chủ đề"}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[200px] p-0">
                 <Command>
-                  <CommandInput placeholder="Tìm chủ đề phụ..." />
+                  <CommandInput placeholder="Tìm chủ đề..." />
                   <CommandList>
                     <CommandEmpty>Không tìm thấy.</CommandEmpty>
                     <CommandGroup>
                       <CommandItem
                         value="all"
                         onSelect={() => {
-                          setSelectedSubtopic("");
-                          setSubtopicOpen(false);
+                          setSelectedTopic("");
+                          setSelectedSubtopic(""); // Reset subtopic
+                          setTopicOpen(false);
                         }}
                       >
                         <Check
                           className={cn(
                             "mr-2 h-4 w-4",
-                            selectedSubtopic === ""
-                              ? "opacity-100"
-                              : "opacity-0"
+                            selectedTopic === "" ? "opacity-100" : "opacity-0"
                           )}
                         />
-                        Tất cả chủ đề phụ
+                        Tất cả chủ đề
                       </CommandItem>
-                      {availableSubtopics.map((st) => (
+                      {Object.keys(topicsData).map((t) => (
                         <CommandItem
-                          key={st}
-                          value={st}
+                          key={t}
+                          value={t}
                           onSelect={(currentValue) => {
-                            setSelectedSubtopic(
-                              currentValue === selectedSubtopic
+                            const newTopic =
+                              currentValue === selectedTopic
                                 ? ""
-                                : currentValue
-                            );
-                            setSubtopicOpen(false);
+                                : currentValue;
+                            setSelectedTopic(newTopic);
+                            if (newTopic !== selectedTopic) {
+                              setSelectedSubtopic(""); // Reset subtopic when topic changes
+                            }
+                            setTopicOpen(false);
                           }}
                         >
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              selectedSubtopic === st
-                                ? "opacity-100"
-                                : "opacity-0"
+                              selectedTopic === t ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          {st}
+                          {t}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -720,6 +678,80 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
               </PopoverContent>
             </Popover>
           )}
+
+          {/* Subtopic Filter */}
+          {!chunkSearchMode &&
+            selectedTopic &&
+            availableSubtopics.length > 0 && (
+              <Popover open={subtopicOpen} onOpenChange={setSubtopicOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={subtopicOpen}
+                    className="w-full sm:w-[200px] justify-between"
+                  >
+                    {selectedSubtopic
+                      ? selectedSubtopic === "all"
+                        ? "Tất cả chủ đề phụ"
+                        : selectedSubtopic
+                      : "Lọc theo chủ đề phụ"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Tìm chủ đề phụ..." />
+                    <CommandList>
+                      <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => {
+                            setSelectedSubtopic("");
+                            setSubtopicOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedSubtopic === ""
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          Tất cả chủ đề phụ
+                        </CommandItem>
+                        {availableSubtopics.map((st) => (
+                          <CommandItem
+                            key={st}
+                            value={st}
+                            onSelect={(currentValue) => {
+                              setSelectedSubtopic(
+                                currentValue === selectedSubtopic
+                                  ? ""
+                                  : currentValue
+                              );
+                              setSubtopicOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedSubtopic === st
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            {st}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -729,7 +761,12 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
               Thêm tài liệu
             </Button>
           )}
-          <Button variant="outline" onClick={() => chunkSearchMode ? handleChunkSearch() : fetchData()}>
+          <Button
+            variant="outline"
+            onClick={() =>
+              chunkSearchMode ? handleChunkSearch() : fetchData()
+            }
+          >
             <RefreshCw className="w-4 h-4" />
             Làm mới
           </Button>
@@ -770,22 +807,6 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
           <DialogHeader className="px-2 flex flex-row items-center justify-between">
             <div className="flex w-full items-center gap-4">
               <div className="flex-1"></div>
-              {/* <Button variant="outline" onClick={loadChunks}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Làm mới
-              </Button> */}
-
-              {/* <Button
-                variant="destructive"
-                effect="expandIcon"
-                iconPlacement="right"
-                icon={ArrowRight}
-                onClick={() => {
-                  setEditingDocument(null);
-                }}
-              >
-                Thoát
-              </Button> */}
             </div>
           </DialogHeader>
 
@@ -872,7 +893,6 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={!!deletingDocumentId}
         onOpenChange={(open) => !open && setDeletingDocumentId(null)}
@@ -894,6 +914,32 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
               Hủy
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Xóa
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Chunk Delete Confirmation Dialog */}
+      <Dialog
+        open={!!deletingChunk}
+        onOpenChange={(open) => !open && setDeletingChunk(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa Chunk</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa chunk này?
+              <br />
+              Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDeletingChunk(null)}>
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmChunkDelete}>
               <Trash2 className="w-4 h-4 mr-2" />
               Xóa
             </Button>

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from fastapi_querybuilder import QueryBuilder
 from fastapi_pagination import Page, Params
 from typing import List
@@ -195,8 +196,54 @@ async def search_document(
     current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     results = await document_service.search_document(query)
-    formatted_results = [{"document": {
-                            "page_content": document.page_content,
-                            "metadata": document.metadata
-                         }, "score": score} for document, score in results]
+    
+    # Collect point IDs from results
+    point_ids = set()
+    for doc, _ in results:
+        # Prioritize _id from metadata as it represents the point_id
+        if doc.metadata and doc.metadata.get("_id"):
+            point_ids.add(str(doc.metadata["_id"]))
+        elif hasattr(doc, "id") and doc.id:
+            point_ids.add(str(doc.id))
+            
+    # Lookup chunks in database using UUIDs
+    chunk_map = {}
+    if point_ids:
+        from uuid import UUID
+        search_ids = []
+        for pid in point_ids:
+            try:
+                search_ids.append(UUID(pid))
+            except ValueError:
+                continue
+                
+        if search_ids:
+            stmt = select(DocumentChunk).where(DocumentChunk.point_id.in_(search_ids))
+            db_results = await session.execute(stmt)
+            chunks = db_results.scalars().all()
+            chunk_map = {str(chunk.point_id): chunk for chunk in chunks}
+    
+    formatted_results = []
+    for document, score in results:
+        # Determine point_id for this document
+        point_id = None
+        if document.metadata and document.metadata.get("_id"):
+            point_id = str(document.metadata["_id"])
+        elif hasattr(document, "id") and document.id:
+            point_id = str(document.id)
+            
+        # Enrich metadata
+        if point_id and point_id in chunk_map:
+            chunk = chunk_map[point_id]
+            document.metadata["chunk_id"] = chunk.id
+            document.metadata["document_id"] = chunk.document_id
+            
+        formatted_results.append({
+            "document": {
+                "page_content": document.page_content,
+                "metadata": document.metadata
+            },
+            "score": score
+        })
+        
     return JSONResponse(content=formatted_results, status_code=status.HTTP_200_OK)

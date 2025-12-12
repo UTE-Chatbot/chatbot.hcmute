@@ -1,45 +1,89 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, Database, MessageSquare, Users } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  LayoutDashboard,
+  Database,
+  MessageSquare,
+  Users,
+  FileText,
+  Loader2,
+} from "lucide-react";
+import { getDashboardStats } from "@/services/thread.service";
+import { DashboardStatsResponse } from "@/types/thread";
+import { DashboardCharts } from "@/components/pages/admin/dashboard/dashboard-charts";
 
 const DashboardPage = () => {
-  const stats = [
+  const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getDashboardStats();
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const statCards = [
     {
       title: "Tổng số hội thoại",
-      value: "0",
+      value: stats?.total_threads ?? 0,
       description: "Hội thoại trong hệ thống",
       icon: MessageSquare,
     },
     {
       title: "Dữ liệu bảng",
-      value: "0",
+      value: stats?.total_csvs ?? 0,
       description: "Bảng dữ liệu CSV",
       icon: Database,
     },
     {
       title: "Tài liệu",
-      value: "0",
+      value: stats?.total_docs ?? 0,
       description: "Tài liệu đã tải lên",
-      icon: Database,
+      icon: FileText,
     },
     {
       title: "Người dùng",
-      value: "0",
+      value: stats?.total_users ?? 0,
       description: "Người dùng đã đăng ký",
       icon: Users,
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tổng quan</h1>
         <p className="text-muted-foreground mt-2">
-          Xem tổng quan về hệ thống chatbot
+          Xem thống kê và báo cáo về hệ thống chatbot
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -48,7 +92,9 @@ const DashboardPage = () => {
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-2xl font-bold">
+                {stat.value.toLocaleString()}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {stat.description}
               </p>
@@ -57,27 +103,7 @@ const DashboardPage = () => {
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Chào mừng đến Admin Panel</CardTitle>
-          <CardDescription>
-            Quản lý và theo dõi hệ thống chatbot HCMUTE
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-start gap-4 p-4 bg-muted rounded-lg">
-              <LayoutDashboard className="w-5 h-5 mt-0.5 text-primary" />
-              <div>
-                <h3 className="font-medium">Bắt đầu quản lý</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Sử dụng menu bên trái để truy cập các chức năng quản lý dữ liệu và hội thoại
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {stats && <DashboardCharts stats={stats} />}
     </div>
   );
 };

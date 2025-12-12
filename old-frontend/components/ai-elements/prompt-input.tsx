@@ -326,7 +326,7 @@ export function PromptInputAttachment({
             <Button
               aria-label="Remove attachment"
               className="absolute inset-0 size-5 cursor-pointer rounded p-0 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 [&>svg]:size-2.5"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 attachments.remove(data.id);
               }}

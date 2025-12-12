@@ -78,6 +78,32 @@ export interface QuestionRequest {
 }
 
 /**
+ * Thread count by date
+ */
+export interface ThreadCountByDate {
+  date: string;
+  count: number;
+}
+
+export interface KeywordStat {
+  keyword: string;
+  count: number;
+}
+
+/**
+ * Dashboard stats response
+ */
+export interface DashboardStatsResponse {
+  total_threads: number;
+  total_csvs: number;
+  total_docs: number;
+  total_users: number;
+  thread_counts: ThreadCountByDate[];
+  popular_keywords: KeywordStat[];
+  popular_topics: string[];
+}
+
+/**
  * Thread list response
  */
 export type ThreadListResponse = PageResponse<ThreadResponse>;

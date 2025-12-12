@@ -11,29 +11,41 @@ import type {
   ThreadListResponse,
   ThreadMessagesResponse,
   ThreadReportResponse,
+  DashboardStatsResponse,
   ChatRequest,
 } from "@/types/thread";
+
+/**
+ * Get dashboard stats (admin only)
+ * @returns Promise<DashboardStatsResponse>
+ */
+export const getDashboardStats = async (): Promise<DashboardStatsResponse> => {
+  const response = await api.get<DashboardStatsResponse>(
+    "/threads/admin/dashboard"
+  );
+  return response.data;
+};
 
 /**
  * Get paginated list of threads with filtering and sorting
  * @param params - Query parameters for filtering, sorting, and pagination
  * @returns Promise<ThreadListResponse>
- * 
+ *
  * @example
  * // Basic pagination
  * getThreads({ page: 1, size: 10 })
- * 
+ *
  * @example
  * // Filter by client_id
- * getThreads({ 
+ * getThreads({
  *   filters: { client_id: { $eq: "user-123" } },
  *   page: 1,
  *   size: 20
  * })
- * 
+ *
  * @example
  * // Sort by created date
- * getThreads({ 
+ * getThreads({
  *   sort: "created_at:desc",
  *   page: 1,
  *   size: 10
@@ -44,7 +56,7 @@ export const getThreads = async (
 ): Promise<ThreadListResponse> => {
   const queryString = buildQueryString(params);
   const url = `/threads${queryString ? `?${queryString}` : ""}`;
-  
+
   const response = await api.get<ThreadListResponse>(url);
   return response.data;
 };
@@ -53,11 +65,11 @@ export const getThreads = async (
  * Create a new thread
  * @param data - Thread creation payload (optional)
  * @returns Promise<ThreadResponse>
- * 
+ *
  * @example
  * // Create new thread
  * const thread = await createThread();
- * 
+ *
  * @example
  * // Create with title
  * const thread = await createThread({
@@ -81,7 +93,7 @@ export const createNewThread = createThread;
  * Get a single thread by ID
  * @param threadId - The thread ID (UUID)
  * @returns Promise<ThreadResponse>
- * 
+ *
  * @example
  * const thread = await getThreadById("550e8400-e29b-41d4-a716-446655440000");
  */
@@ -96,7 +108,7 @@ export const getThreadById = async (
  * Get messages for a thread
  * @param threadId - The thread ID (UUID)
  * @returns Promise<ThreadMessagesResponse>
- * 
+ *
  * @example
  * const messages = await getThreadMessages("550e8400-e29b-41d4-a716-446655440000");
  * console.log(messages.messages);
@@ -113,7 +125,7 @@ export const getThreadMessages = async (
  * Delete a thread
  * @param threadId - The thread ID (UUID)
  * @returns Promise<void>
- * 
+ *
  * @example
  * await deleteThread("550e8400-e29b-41d4-a716-446655440000");
  */
@@ -124,7 +136,7 @@ export const deleteThread = async (threadId: string): Promise<void> => {
 /**
  * Get global thread report (admin only)
  * @returns Promise<ThreadReportResponse>
- * 
+ *
  * @example
  * const report = await getThreadReport();
  * console.log(`Total threads: ${report.total_threads}`);
@@ -142,14 +154,14 @@ export const getThreadReport = async (): Promise<ThreadReportResponse> => {
  * @param threadId - The thread ID (UUID)
  * @param request - Chat request with messages
  * @returns Promise<Response> - Streaming response
- * 
+ *
  * @example
  * const response = await sendChatMessage("550e8400-e29b-41d4-a716-446655440000", {
  *   messages: [
  *     { role: "human", content: "What is machine learning?" }
  *   ]
  * });
- * 
+ *
  * // Handle streaming response
  * const reader = response.body?.getReader();
  * const decoder = new TextDecoder();
@@ -193,5 +205,5 @@ export default {
   deleteThread,
   getThreadReport,
   sendChatMessage,
+  getDashboardStats,
 };
-

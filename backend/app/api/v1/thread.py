@@ -20,6 +20,7 @@ from app.schemas.thread import (
     ThreadMessagesResponse,
     MessageResponse,
     ThreadReportResponse,
+    DashboardStatsResponse,
     QuestionRequest,
     ChatRequest,
 )
@@ -143,6 +144,15 @@ async def get_global_thread_report(
 ):
     report = await thread_service.generate_thread_report(db, client_id=None)
     return report
+
+
+@router.get("/admin/dashboard", response_model=DashboardStatsResponse)
+async def get_dashboard_stats(
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    stats = await thread_service.get_dashboard_stats(db)
+    return stats
 
 
 

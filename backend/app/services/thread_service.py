@@ -8,11 +8,17 @@ from sqlalchemy.orm import selectinload
 from collections import Counter
 import re
 
+from app.models.document import Document
+from app.models.csv_table import CSVTable
 from app.models.thread import Thread
 from app.models.rate_limit import RateLimit
 from app.models.user import User, RoleEnum
 from app.services.rag_service.component.chat_history import ChatHistory
-from app.schemas.thread import ThreadCreate, ThreadResponse, ThreadMessagesResponse, MessageResponse, ThreadReportResponse
+from app.schemas.thread import (
+    ThreadCreate, ThreadResponse, ThreadMessagesResponse, 
+    MessageResponse, ThreadReportResponse, DashboardStatsResponse,
+    ThreadCountByDate, KeywordStat
+)
 from app.core.config import settings
 
 # Initialize chat history
@@ -166,7 +172,7 @@ async def get_thread_messages(thread_id: UUID) -> List[MessageResponse]:
         return []
 
 
-def _extract_keywords_from_text(text: str, top_k: int = 10) -> List[str]:
+def _extract_keywords_from_text(text: str, top_k: int = 10) -> List[KeywordStat]:
     """
     Extract keywords from text using NLP techniques.
     
@@ -219,9 +225,10 @@ def _extract_keywords_from_text(text: str, top_k: int = 10) -> List[str]:
     word_freq = Counter(cleaned_words)
     
     # Get top keywords and normalize (replace underscores with spaces)
-    top_keywords = [word.replace('_', ' ') for word, _ in word_freq.most_common(top_k)]
-    
-    return top_keywords
+    return [
+        KeywordStat(keyword=word.replace('_', ' '), count=count) 
+        for word, count in word_freq.most_common(top_k)
+    ]
 
 
 def _extract_topics_from_keywords(keywords: List[str]) -> List[str]:
@@ -288,7 +295,8 @@ async def generate_thread_report(
     # Combine all user text and extract keywords
     combined_text = " ".join(all_user_text)
     keywords = _extract_keywords_from_text(combined_text, top_k=15)
-    topics = _extract_topics_from_keywords(keywords)
+    keyword_strings = [k.keyword for k in keywords]
+    topics = _extract_topics_from_keywords(keyword_strings)
     
     average_messages = total_messages / total_threads if total_threads > 0 else 0
     
@@ -298,6 +306,89 @@ async def generate_thread_report(
         keywords=keywords,
         topics=topics,
         average_messages_per_thread=round(average_messages, 2)
+    )
+
+
+async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
+    """
+    Get statistics for the admin dashboard.
+    """
+    # 1. Get counts
+    # Count threads
+    total_threads = (await db.execute(select(func.count(Thread.thread_id)))).scalar() or 0
+    
+    # Count CSVs
+    total_csvs = (await db.execute(select(func.count(CSVTable.id)))).scalar() or 0
+    
+    # Count Docs
+    total_docs = (await db.execute(select(func.count(Document.id)))).scalar() or 0
+    
+    # Count Users
+    total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
+
+    # 2. Get Thread Counts by Date (Last 30 days)
+    limit_date = datetime.now() - timedelta(days=30)
+    
+    # Use generic date casting if possible, or string slicing
+    # Postgres 'date' function works. SQLite 'date' function also works but syntax varies.
+    # Assuming Postgres (from CSVTable JSONB usage).
+    
+    date_counts = []
+    
+    try:
+        # Group by date of creation
+        stats_query = (
+            select(
+                func.date(Thread.created_at).label("date"), 
+                func.count(Thread.thread_id).label("count")
+            )
+            .where(Thread.created_at >= limit_date)
+            .group_by(func.date(Thread.created_at))
+            .order_by("date")
+        )
+        result = await db.execute(stats_query)
+        rows = result.all()
+        
+        for r in rows:
+            date_counts.append(ThreadCountByDate(date=str(r.date), count=r.count))
+            
+    except Exception as e:
+        print(f"Error getting thread stats: {e}")
+        # Fallback or empty
+
+    # 3. Get Popular Keywords/Topics from recent threads (Last 50)
+    recent_threads_result = await db.execute(
+        select(Thread)
+        .order_by(Thread.created_at.desc())
+        .limit(20) # Limit to 20 for performance
+    )
+    recent_threads = recent_threads_result.scalars().all()
+    
+    all_user_text = []
+    for thread in recent_threads:
+        try:
+            # We reuse get_thread_messages. 
+            # Note: valid messages are stored in LangChain history table usually.
+            messages = await get_thread_messages(thread.thread_id)
+            for msg in messages:
+                if msg.role == "human":
+                    all_user_text.append(msg.content)
+        except Exception:
+            continue
+            
+    combined_text = " ".join(all_user_text)
+    keywords = _extract_keywords_from_text(combined_text, top_k=10)
+    keyword_strings = [k.keyword for k in keywords]
+    topics = _extract_topics_from_keywords(keyword_strings)
+
+    return DashboardStatsResponse(
+        total_threads=total_threads,
+        total_csvs=total_csvs,
+        total_docs=total_docs,
+        total_users=total_users,
+        thread_counts=date_counts,
+        popular_keywords=keywords,
+        popular_topics=topics
     )
 
 

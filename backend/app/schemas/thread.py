@@ -32,12 +32,32 @@ class ThreadMessagesResponse(BaseModel):
     messages: List[MessageResponse]
 
 
+class KeywordStat(BaseModel):
+    keyword: str
+    count: int
+
+
 class ThreadReportResponse(BaseModel):
     total_threads: int
     total_messages: int
-    keywords: List[str]
+    keywords: List[KeywordStat]
     topics: List[str]
     average_messages_per_thread: float
+
+
+class ThreadCountByDate(BaseModel):
+    date: str
+    count: int
+
+
+class DashboardStatsResponse(BaseModel):
+    total_threads: int
+    total_csvs: int
+    total_docs: int
+    total_users: int
+    thread_counts: List[ThreadCountByDate]
+    popular_keywords: List[KeywordStat]
+    popular_topics: List[str]
 
 
 class QuestionRequest(BaseModel):

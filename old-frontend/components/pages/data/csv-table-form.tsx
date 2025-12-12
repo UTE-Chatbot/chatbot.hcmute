@@ -12,18 +12,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Database, Plus, X, Upload, FileSpreadsheet, AlertCircle, ArrowLeft } from "lucide-react";
+import {
+  Database,
+  Plus,
+  X,
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 import { uploadFile } from "@/services/file.service";
 import { createCSVTable, updateCSVTable } from "@/services/csv_table.service";
-import type { 
-  CSVTableCreate, 
-  CSVTableColumnInput, 
+import type {
+  CSVTableCreate,
+  CSVTableColumnInput,
   CSVTableResponse,
-  ColumnType 
+  ColumnType,
 } from "@/types/csv-table";
 import { ColumnTypeLabels, ColumnTypeDescriptions } from "@/types/csv-table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -33,20 +48,33 @@ interface CSVTableFormProps {
   onCancel?: () => void;
 }
 
-export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormProps) {
+export function CSVTableForm({
+  initialData,
+  onSuccess,
+  onCancel,
+}: CSVTableFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState(initialData?.name || "");
-  const [description, setDescription] = useState(initialData?.description || "");
+  const [description, setDescription] = useState(
+    initialData?.description || ""
+  );
   const [columns, setColumns] = useState<CSVTableColumnInput[]>(
     initialData?.columns || [
-      { name: "", type: "TEXT" as ColumnType, description: "", is_categorical: false },
+      {
+        name: "",
+        type: "TEXT" as ColumnType,
+        description: "",
+        is_categorical: false,
+      },
     ]
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [csvPreview, setCsvPreview] = useState<string[][] | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [preservedColumns, setPreservedColumns] = useState<Set<string>>(new Set());
+  const [preservedColumns, setPreservedColumns] = useState<Set<string>>(
+    new Set()
+  );
 
   const isEditMode = !!initialData;
 
@@ -59,27 +87,27 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
   }, [initialData]);
 
   const parseCSV = (text: string): string[][] => {
-    const lines = text.split('\n').filter(line => line.trim());
-    return lines.map(line => {
+    const lines = text.split("\n").filter((line) => line.trim());
+    return lines.map((line) => {
       // Simple CSV parsing (handles basic cases)
       const values: string[] = [];
-      let current = '';
+      let current = "";
       let inQuotes = false;
-      
+
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        
+
         if (char === '"') {
           inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
+        } else if (char === "," && !inQuotes) {
           values.push(current.trim());
-          current = '';
+          current = "";
         } else {
           current += char;
         }
       }
       values.push(current.trim());
-      
+
       return values;
     });
   };
@@ -89,7 +117,7 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
     if (!selectedFile) return;
 
     // Validate file type
-    if (!selectedFile.name.endsWith('.csv')) {
+    if (!selectedFile.name.endsWith(".csv")) {
       setError("Vui lòng chọn file CSV");
       return;
     }
@@ -99,38 +127,40 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
     setPreviewError(null);
 
     if (!name) {
-      setName(selectedFile.name.replace('.csv', ''));
+      setName(selectedFile.name.replace(".csv", ""));
     }
-    
+
     // Parse CSV for preview and column detection
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
         const rows = parseCSV(text);
-        
+
         if (rows.length === 0) {
           setPreviewError("File CSV trống");
           return;
         }
 
         setCsvPreview(rows);
-        
+
         // Auto-detect columns from header
         const headers = rows[0];
         if (headers.length > 0) {
           if (isEditMode && initialData) {
             // In edit mode: compare new headers with existing columns
             const existingColumnMap = new Map(
-              columns.map(col => [col.name.toLowerCase().trim(), col])
+              columns.map((col) => [col.name.toLowerCase().trim(), col])
             );
-            
+
             const preserved = new Set<string>();
-            
-            const newColumns = headers.map(header => {
+
+            const newColumns = headers.map((header) => {
               const trimmedHeader = header.trim();
-              const existingColumn = existingColumnMap.get(trimmedHeader.toLowerCase());
-              
+              const existingColumn = existingColumnMap.get(
+                trimmedHeader.toLowerCase()
+              );
+
               if (existingColumn) {
                 // Column name matches: preserve all existing data
                 preserved.add(trimmedHeader.toLowerCase());
@@ -150,12 +180,12 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
                 };
               }
             });
-            
+
             setColumns(newColumns);
             setPreservedColumns(preserved);
           } else {
             // Create mode: generate new columns
-            const newColumns = headers.map(header => ({
+            const newColumns = headers.map((header) => ({
               name: header,
               type: "TEXT" as ColumnType,
               description: "",
@@ -166,7 +196,9 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
         }
       } catch (err) {
         console.error("Error parsing CSV:", err);
-        setPreviewError("Không thể đọc file CSV. Vui lòng kiểm tra định dạng file.");
+        setPreviewError(
+          "Không thể đọc file CSV. Vui lòng kiểm tra định dạng file."
+        );
       }
     };
     reader.onerror = () => {
@@ -180,7 +212,7 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
     setCsvPreview(null);
     setPreviewError(null);
     setPreservedColumns(new Set());
-    
+
     // Restore original columns when removing file in edit mode
     if (isEditMode && initialData) {
       setColumns(initialData.columns);
@@ -190,7 +222,12 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
   const handleAddColumn = () => {
     setColumns([
       ...columns,
-      { name: "", type: "TEXT" as ColumnType, description: "", is_categorical: false },
+      {
+        name: "",
+        type: "TEXT" as ColumnType,
+        description: "",
+        is_categorical: false,
+      },
     ]);
   };
 
@@ -261,7 +298,11 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
       onSuccess?.();
     } catch (err) {
       console.error("Error saving CSV table:", err);
-      setError(`Không thể ${isEditMode ? 'cập nhật' : 'tạo'} bảng dữ liệu. Vui lòng thử lại.`);
+      setError(
+        `Không thể ${
+          isEditMode ? "cập nhật" : "tạo"
+        } bảng dữ liệu. Vui lòng thử lại.`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -276,27 +317,30 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
             {isEditMode ? "Chỉnh sửa bảng dữ liệu" : "Tạo bảng dữ liệu CSV mới"}
           </h2>
           <p className="text-muted-foreground mt-1">
-            {isEditMode 
+            {isEditMode
               ? "Cập nhật thông tin và cấu trúc bảng dữ liệu"
               : "Tải lên file CSV và định nghĩa cấu trúc các cột"}
           </p>
         </div>
         {onCancel && (
-          <Button variant="outline" onClick={onCancel}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
+          <Button
+            variant="destructive"
+            effect="expandIcon"
+            iconPlacement="right"
+            icon={ArrowRight}
+            onClick={onCancel}
+          >
+            Thoát
           </Button>
         )}
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <Card>
           <CardHeader>
             <CardTitle>Thông tin cơ bản</CardTitle>
-            <CardDescription>
-              Tên và mô tả cho bảng dữ liệu
-            </CardDescription>
+            <CardDescription>Tên và mô tả cho bảng dữ liệu</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Table Name */}
@@ -334,7 +378,7 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
           <CardHeader>
             <CardTitle>File CSV {isEditMode ? "(Tùy chọn)" : "*"}</CardTitle>
             <CardDescription>
-              {isEditMode 
+              {isEditMode
                 ? "Tải lên file CSV mới nếu muốn thay đổi dữ liệu"
                 : "Tải lên file CSV chứa dữ liệu của bạn"}
             </CardDescription>
@@ -388,7 +432,9 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
                 {csvPreview && csvPreview.length > 0 && (
                   <div className="border rounded-lg overflow-hidden">
                     <div className="bg-muted px-4 py-2 border-b">
-                      <h4 className="text-sm font-semibold">Xem trước dữ liệu</h4>
+                      <h4 className="text-sm font-semibold">
+                        Xem trước dữ liệu
+                      </h4>
                       <p className="text-xs text-muted-foreground">
                         Hiển thị {Math.min(5, csvPreview.length)} dòng đầu tiên
                       </p>
@@ -398,7 +444,10 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
                         <thead className="bg-muted/50">
                           <tr>
                             {csvPreview[0]?.map((header, idx) => (
-                              <th key={idx} className="text-left p-2 font-semibold whitespace-nowrap">
+                              <th
+                                key={idx}
+                                className="text-left p-2 font-semibold whitespace-nowrap"
+                              >
                                 {header || `Cột ${idx + 1}`}
                               </th>
                             ))}
@@ -408,7 +457,10 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
                           {csvPreview.slice(1, 6).map((row, rowIdx) => (
                             <tr key={rowIdx} className="border-t">
                               {row.map((cell, cellIdx) => (
-                                <td key={cellIdx} className="p-2 whitespace-nowrap">
+                                <td
+                                  key={cellIdx}
+                                  className="p-2 whitespace-nowrap"
+                                >
                                   {cell}
                                 </td>
                               ))}
@@ -426,11 +478,14 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
                       <div className="text-sm text-blue-900 dark:text-blue-100">
-                        <p className="font-medium mb-1">Đã so sánh cột với dữ liệu hiện tại</p>
+                        <p className="font-medium mb-1">
+                          Đã so sánh cột với dữ liệu hiện tại
+                        </p>
                         <p className="text-xs">
-                          • {preservedColumns.size} cột giữ nguyên thông tin (kiểu dữ liệu, mô tả)
-                          <br />
-                          • {columns.length - preservedColumns.size} cột mới với cấu hình mặc định
+                          • {preservedColumns.size} cột giữ nguyên thông tin
+                          (kiểu dữ liệu, mô tả)
+                          <br />• {columns.length - preservedColumns.size} cột
+                          mới với cấu hình mặc định
                         </p>
                       </div>
                     </div>
@@ -447,7 +502,15 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
             ) : isEditMode ? (
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">
-                  Đang sử dụng file: <a href={initialData?.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{initialData?.url}</a>
+                  Đang sử dụng file:{" "}
+                  <a
+                    href={initialData?.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {initialData?.url}
+                  </a>
                 </div>
                 <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
                   <label
@@ -498,22 +561,32 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
           <CardContent>
             <div className="space-y-4">
               {columns.map((column, index) => {
-                const isPreserved = preservedColumns.has(column.name.toLowerCase().trim());
+                const isPreserved = preservedColumns.has(
+                  column.name.toLowerCase().trim()
+                );
                 return (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className={cn(
                       "p-4 border rounded-lg bg-card space-y-3",
-                      isEditMode && file && isPreserved && "border-green-500/50 bg-green-50/50 dark:bg-green-950/20",
-                      isEditMode && file && !isPreserved && "border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20"
+                      isEditMode &&
+                        file &&
+                        isPreserved &&
+                        "border-green-500/50 bg-green-50/50 dark:bg-green-950/20",
+                      isEditMode &&
+                        file &&
+                        !isPreserved &&
+                        "border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20"
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Cột {index + 1}</span>
+                        <span className="text-sm font-medium">
+                          Cột {index + 1}
+                        </span>
                         {isEditMode && file && (
-                          <Badge 
-                            variant={isPreserved ? "default" : "secondary"} 
+                          <Badge
+                            variant={isPreserved ? "default" : "secondary"}
                             className="text-xs"
                           >
                             {isPreserved ? "Giữ nguyên" : "Mới"}
@@ -533,81 +606,96 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
                       )}
                     </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Tên cột</Label>
+                        <Input
+                          value={column.name}
+                          onChange={(e) =>
+                            handleColumnChange(index, "name", e.target.value)
+                          }
+                          placeholder="student_id"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Kiểu dữ liệu</Label>
+                        <Select
+                          value={column.type}
+                          onValueChange={(value) =>
+                            handleColumnChange(index, "type", value)
+                          }
+                          disabled={isSubmitting}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(ColumnTypeLabels).map(
+                              ([type, label]) => (
+                                <SelectItem key={type} value={type}>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{label}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {
+                                        ColumnTypeDescriptions[
+                                          type as ColumnType
+                                        ]
+                                      }
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
-                      <Label className="text-xs">Tên cột</Label>
+                      <Label className="text-xs">Mô tả</Label>
                       <Input
-                        value={column.name}
+                        value={column.description}
                         onChange={(e) =>
-                          handleColumnChange(index, "name", e.target.value)
+                          handleColumnChange(
+                            index,
+                            "description",
+                            e.target.value
+                          )
                         }
-                        placeholder="student_id"
+                        placeholder="Mô tả ý nghĩa của cột này..."
                         disabled={isSubmitting}
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Kiểu dữ liệu</Label>
-                      <Select
-                        value={column.type}
-                        onValueChange={(value) =>
-                          handleColumnChange(index, "type", value)
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`categorical-${index}`}
+                        checked={column.is_categorical}
+                        onCheckedChange={(checked: boolean) =>
+                          handleColumnChange(
+                            index,
+                            "is_categorical",
+                            checked === true
+                          )
                         }
                         disabled={isSubmitting}
+                      />
+                      <Label
+                        htmlFor={`categorical-${index}`}
+                        className="text-xs font-normal cursor-pointer"
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(ColumnTypeLabels).map(([type, label]) => (
-                            <SelectItem key={type} value={type}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{label}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {ColumnTypeDescriptions[type as ColumnType]}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        Dữ liệu phân loại (có số lượng giá trị hữu hạn, ví dụ:
+                        giới tính, khoa)
+                      </Label>
                     </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Mô tả</Label>
-                    <Input
-                      value={column.description}
-                      onChange={(e) =>
-                        handleColumnChange(index, "description", e.target.value)
-                      }
-                      placeholder="Mô tả ý nghĩa của cột này..."
-                      disabled={isSubmitting}
-                    />
+                    <Badge variant="outline" className="text-xs">
+                      {ColumnTypeLabels[column.type]}
+                    </Badge>
                   </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`categorical-${index}`}
-                      checked={column.is_categorical}
-                      onCheckedChange={(checked: boolean) =>
-                        handleColumnChange(index, "is_categorical", checked === true)
-                      }
-                      disabled={isSubmitting}
-                    />
-                    <Label
-                      htmlFor={`categorical-${index}`}
-                      className="text-xs font-normal cursor-pointer"
-                    >
-                      Dữ liệu phân loại (có số lượng giá trị hữu hạn, ví dụ: giới tính, khoa)
-                    </Label>
-                  </div>
-
-                  <Badge variant="outline" className="text-xs">
-                    {ColumnTypeLabels[column.type]}
-                  </Badge>
-                </div>
-              );
+                );
               })}
             </div>
           </CardContent>
@@ -621,13 +709,7 @@ export function CSVTableForm({ initialData, onSuccess, onCancel }: CSVTableFormP
           </div>
         )}
 
-        {/* Submit Button */}
         <div className="flex gap-3">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-              Hủy
-            </Button>
-          )}
           <Button type="submit" className="flex-1" disabled={isSubmitting}>
             {isSubmitting ? (
               <>

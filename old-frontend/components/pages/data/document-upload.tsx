@@ -96,7 +96,9 @@ export function DocumentUpload({
   const [newSubtopicName, setNewSubtopicName] = useState("");
 
   const [fullText, setFullText] = useState("");
-  const [chunkMode, setChunkMode] = useState<ChunkMode>(ChunkMode.DELIMITER_SPLIT);
+  const [chunkMode, setChunkMode] = useState<ChunkMode>(
+    ChunkMode.DELIMITER_SPLIT
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,10 +176,9 @@ export function DocumentUpload({
     }
   }, [initialData]);
 
-
   useEffect(() => {
     console.log("Full text updated:", fullText);
-  },[fullText])
+  }, [fullText]);
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -322,8 +323,8 @@ export function DocumentUpload({
         const updateData: DocumentUpdate = {
           name: name.trim(),
           document_metadata: {
-            topic: topic.trim() || "General",
-            subtopic: subtopic.trim() || "General",
+            topic: topic.trim() || "Chung",
+            subtopic: subtopic.trim() || "Chung",
           },
           chunk_mode: chunkMode,
         };
@@ -344,8 +345,8 @@ export function DocumentUpload({
           file_path: filePath || undefined,
           full_text: fullText.trim() || undefined,
           document_metadata: {
-            topic: topic.trim() || "General",
-            subtopic: subtopic.trim() || "General",
+            topic: topic.trim() || "Chung",
+            subtopic: subtopic.trim() || "Chung",
           },
           chunk_mode: chunkMode,
         };
@@ -442,7 +443,7 @@ export function DocumentUpload({
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 shrink-0 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={(e:any) => {
+                            onClick={(e: any) => {
                               e.stopPropagation();
                               handleDeleteTopic(t);
                             }}
@@ -514,7 +515,7 @@ export function DocumentUpload({
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 shrink-0 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={(e:any) => {
+                            onClick={(e: any) => {
                               e.stopPropagation();
                               handleDeleteSubtopic(s);
                             }}
@@ -549,9 +550,7 @@ export function DocumentUpload({
           <Label htmlFor="chunkMode">Phương thức chia nhỏ</Label>
           <Select
             value={chunkMode}
-            onValueChange={(value) =>
-              setChunkMode(value as ChunkMode)
-            }
+            onValueChange={(value) => setChunkMode(value as ChunkMode)}
             disabled={isUploading}
           >
             <SelectTrigger>
@@ -570,7 +569,8 @@ export function DocumentUpload({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Chế độ chia nhỏ sẽ được áp dụng khi bạn nhấn "{initialData ? "Cập nhật tài liệu" : "Tạo tài liệu"}"
+            Chế độ chia nhỏ sẽ được áp dụng khi bạn nhấn "
+            {initialData ? "Cập nhật tài liệu" : "Tạo tài liệu"}"
           </p>
         </div>
 
@@ -662,22 +662,22 @@ export function DocumentUpload({
             <TabsContent value="text">
               <Card className="!p-0 bg-white border-none">
                 <CardContent className="!p-0">
-                    <MinimalTiptap
-                      content={fullText}
-                      onChange={setFullText}
-                      placeholder="Bắt đầu nhập nội dung..."
-                      className="min-h-[400px]"
-                      onImageUpload={async (file: File) => {
-                        try {
-                          const url = await uploadFile(file);
-                          return url;
-                        } catch (error) {
-                          console.error("Failed to upload image:", error);
-                          alert("Không thể tải lên hình ảnh. Vui lòng thử lại.");
-                          throw error;
-                        }
-                      }}
-                    />
+                  <MinimalTiptap
+                    content={fullText}
+                    onChange={setFullText}
+                    placeholder="Bắt đầu nhập nội dung..."
+                    className="min-h-[400px]"
+                    onImageUpload={async (file: File) => {
+                      try {
+                        const url = await uploadFile(file);
+                        return url;
+                      } catch (error) {
+                        console.error("Failed to upload image:", error);
+                        alert("Không thể tải lên hình ảnh. Vui lòng thử lại.");
+                        throw error;
+                      }
+                    }}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

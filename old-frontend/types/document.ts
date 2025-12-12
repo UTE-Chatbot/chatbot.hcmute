@@ -117,7 +117,11 @@ export interface DocumentChunkResponse extends DocumentChunkBase {
 export interface DocumentSearchResult {
   document: {
     page_content: string;
-    metadata: Record<string, any>;
+    metadata: {
+      chunk_id?: number;
+      document_id?: number;
+      [key: string]: any;
+    };
   };
   score: number;
 }
@@ -167,7 +171,7 @@ export const DocumentStatusLabels: Record<DocumentStatus, string> = {
   [DocumentStatus.PARSING_FAILED]: "Tách văn bản thất bại",
   [DocumentStatus.READY]: "Đang chunk",
   [DocumentStatus.CHUNKING_FAILED]: "Chunk thất bại",
-  [DocumentStatus.INDEXING]: "Đang indexing",
+  [DocumentStatus.INDEXING]: "Đang huấn luyện",
   [DocumentStatus.INDEXED]: "Train thành công",
 };
 

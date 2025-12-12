@@ -2,12 +2,34 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getCSVTables, deleteCSVTable } from "@/services/csv_table.service";
-import { CSVTableResponse, CSVTableListResponse, ColumnTypeLabels } from "@/types/csv-table";
+import {
+  CSVTableResponse,
+  CSVTableListResponse,
+  ColumnTypeLabels,
+} from "@/types/csv-table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Database, Edit, Trash2, RefreshCw, Search, FileSpreadsheet, Plus } from "lucide-react";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  Database,
+  Edit,
+  Trash2,
+  RefreshCw,
+  Search,
+  FileSpreadsheet,
+  Plus,
+} from "lucide-react";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +37,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/components/ui/empty";
 
 interface CSVTableListProps {
   onAdd?: () => void;
@@ -28,7 +55,9 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [viewingTable, setViewingTable] = useState<CSVTableResponse | null>(null);
+  const [viewingTable, setViewingTable] = useState<CSVTableResponse | null>(
+    null
+  );
   const [deletingTableId, setDeletingTableId] = useState<number | null>(null);
   const pageSize = 9;
 
@@ -36,10 +65,10 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await getCSVTables({ 
-        page, 
+      const response = await getCSVTables({
+        page,
         size: pageSize,
-        search: search || undefined 
+        search: search || undefined,
       });
       setData(response);
     } catch (err) {
@@ -129,10 +158,8 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
             className="overflow-hidden hover:shadow-md transition-shadow flex flex-col bg-white"
           >
             <CardHeader className="pb-3 flex-1">
-                <div className="flex justify-between items-start gap-2">
-           
-                <CardTitle    className="text-lg font-medium leading-tight line-clamp-2"
-               >
+              <div className="flex justify-between items-start gap-2">
+                <CardTitle className="text-lg font-medium leading-tight line-clamp-2">
                   {table.name}
                 </CardTitle>
                 <Badge variant="outline" className="shrink-0">
@@ -143,7 +170,7 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
                 {table.description || "Không có mô tả"}
               </CardDescription>
             </CardHeader>
-               <CardContent className="px-0">
+            <CardContent className="px-0">
               <div className="space-y-3">
                 {/* Columns Preview */}
                 <div className="flex flex-wrap gap-2 px-6">
@@ -171,13 +198,10 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
                     onClick={() => setViewingTable(table)}
                   >
                     <Database className="w-4 h-4 mr-1" />
-                   Chi tiết
+                    Chi tiết
                   </Button>
                   {onEdit && (
-                    <Button
-                      variant="outline"
-                      onClick={() => onEdit(table)}
-                    >
+                    <Button variant="outline" onClick={() => onEdit(table)}>
                       <Edit className="w-4 h-4 mr-1" />
                       Chỉnh sửa
                     </Button>
@@ -203,10 +227,12 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
       {/* Top Bar: Search, Add, Refresh */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-lg border shadow-sm sticky top-0 z-10">
         <div className="flex items-center gap-4 w-full">
-          <InputGroup className="flex-1 max-w-md">
+          <InputGroup className="flex-1 w-full">
             <InputGroupInput
               value={search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setSearch(e.target.value)
+              }
               placeholder="Tìm bảng dữ liệu theo tên"
             />
             <InputGroupAddon>
@@ -222,8 +248,14 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
               Thêm bảng
             </Button>
           )}
-          <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+            />
             Làm mới
           </Button>
         </div>
@@ -294,8 +326,12 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
                     <thead className="bg-muted">
                       <tr>
                         <th className="text-left p-2 font-semibold">Tên cột</th>
-                        <th className="text-left p-2 font-semibold">Kiểu dữ liệu</th>
-                        <th className="text-left p-2 font-semibold">Phân loại</th>
+                        <th className="text-left p-2 font-semibold">
+                          Kiểu dữ liệu
+                        </th>
+                        <th className="text-left p-2 font-semibold">
+                          Phân loại
+                        </th>
                         <th className="text-left p-2 font-semibold">Mô tả</th>
                       </tr>
                     </thead>
@@ -304,13 +340,13 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
                         <tr key={idx} className="border-t">
                           <td className="p-2 font-mono">{col.name}</td>
                           <td className="p-2">
-                            <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                            <span className="px-2 py-1 bg-primary/10  rounded-3xl text-primary rounded text-xs">
                               {ColumnTypeLabels[col.type]}
                             </span>
                           </td>
                           <td className="p-2">
                             {col.is_categorical ? (
-                              <span className="text-green-600">✓</span>
+                              <span className="text-green-600 ">✓</span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
@@ -326,11 +362,13 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Tạo lúc: {new Date(viewingTable.created_at).toLocaleString("vi-VN")}
+                Tạo lúc:{" "}
+                {new Date(viewingTable.created_at).toLocaleString("vi-VN")}
                 {viewingTable.updated_at && (
                   <>
                     {" • "}
-                    Cập nhật: {new Date(viewingTable.updated_at).toLocaleString("vi-VN")}
+                    Cập nhật:{" "}
+                    {new Date(viewingTable.updated_at).toLocaleString("vi-VN")}
                   </>
                 )}
               </div>
