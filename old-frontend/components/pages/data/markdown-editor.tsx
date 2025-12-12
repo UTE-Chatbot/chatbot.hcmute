@@ -24,7 +24,7 @@ const parseMarkdown = (text: string): string => {
   // LaTeX block math: $$...$$
   html = html.replace(/\$\$([^\$]+)\$\$/g, '<div class="latex-block">$1</div>');
 
-  // Chunk markers: <<<CHUNK>>>
+  // Chunk markers: <<<CHUNK_SEPARATOR>>>
   html = html.replace(
     /&lt;&lt;&lt;CHUNK&gt;&gt;&gt;/g,
     '<div class="chunk-marker">📄 CHUNK BOUNDARY</div>'
@@ -80,7 +80,7 @@ export function MarkdownEditor({ document, onSave, onCancel }: MarkdownEditorPro
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const marker = "\n<<<CHUNK>>>\n";
+    const marker = "\n<<<CHUNK_SEPARATOR>>>\n";
 
     const newContent = content.substring(0, start) + marker + content.substring(end);
     setContent(newContent);
@@ -99,7 +99,7 @@ export function MarkdownEditor({ document, onSave, onCancel }: MarkdownEditorPro
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Chỉnh sửa tài liệu: {document.name}</h2>
             <p className="text-muted-foreground mt-1">
-              Hỗ trợ Markdown và LaTeX. Sử dụng {'<<<CHUNK>>>'} để đánh dấu ranh giới chunk.
+              Hỗ trợ Markdown và LaTeX. Sử dụng {'<<<CHUNK_SEPARATOR>>>'} để đánh dấu ranh giới chunk.
             </p>
           </div>
         </div>
@@ -124,7 +124,7 @@ export function MarkdownEditor({ document, onSave, onCancel }: MarkdownEditorPro
                 size="sm"
                 onClick={insertChunkMarker}
               >
-                Thêm {'<<<CHUNK>>>'}
+                Thêm {'<<<CHUNK_SEPARATOR>>>'}
               </Button>
             </div>
           </div>
@@ -147,7 +147,7 @@ Inline: $E = mc^2$
 Block: $$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$
 
 Đánh dấu chunk:
-<<<CHUNK>>>
+<<<CHUNK_SEPARATOR>>>
 "
               className="font-mono text-sm h-full"
               disabled={isSaving}

@@ -1,104 +1,78 @@
 "use client";
-import {
-  Conversation,
-  ConversationContent,
-  ConversationEmptyState,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
-import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
-import {
-  PromptInputTextarea,
-  PromptInputSubmit,
-  PromptInput,
-  PromptInputMessage,
-} from "@/components/ai-elements/prompt-input";
-import { MessageSquare } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
-import { useChat } from "@ai-sdk/react";
-import { Input } from "@/components/ui/input";
-import { TextStreamChatTransport } from "ai";
-const ConversationDemo = () => {
-  const [input, setInput] = useState("");
+import { MinimalTiptap } from "@/components/ui/shadcn-io/minimal-tiptap";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { uploadFile } from "@/services/file.service";
 
-  const { messages, status, stop, setMessages, sendMessage } = useChat({
-    transport: new TextStreamChatTransport({
-      api: process.env.NEXT_PUBLIC_API_URL + "/threadsapi/v1/chatk",
-    }),
-    onError: (error) => {
-      // toast.error(`Error: ${error.message}`);
-    },
-  });
+export default function MinimalTiptapDemo() {
+  const [content, setContent] = useState<string>(`
+### OK
 
-  const handleSubmit = (
-    message: PromptInputMessage,
-    event: FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
-    if (message.text.trim()) {
-      sendMessage({ text: message.text });
-      setInput("");
+$x_2$
+
+$x_3$
+$$
+\\sum_{n=1}^{\\infty} \\frac{(-1)^{n+1}}{n} \\left( \\int_0^1 x^{n^2} e^{-x^2} \\, dx \\right) \\cdot \\frac{\\prod_{k=1}^{n} \\Gamma\\left( \\frac{k}{n+1} \\right)}{\\sqrt{2\\pi n}} \\, e^{\\,i \\pi \\frac{n^2+n}{2}} \\, \\frac{d}{dx}\\Big|_{x=1} \\left( x^n \\ln\\left(1+x^n\\right) \\right)
+$$  
+$\\sum_{n=1}^{\\infty} \\frac{(-1)^{n+1}}{n} \\left( \\int_0^1 x^{n^2} e^{-x^2} \\, dx \\right) \\cdot \\frac{\\prod_{k=1}^{n} \\Gamma\\left( \\frac{k}{n+1} \\right)}{\\sqrt{2\\pi n}} \\, e^{\\,i \\pi \\frac{n^2+n}{2}} \\, \\frac{d}{dx}\\Big|_{x=1} \\left( x^n \\ln\\left(1+x^n\\right) \\right)$
+
+YOU ARE GOOD
+
+### HEADING 1
+asdasd
+## HEADING 2
+$$
+\\sum_{n=1}^{\\infty} \\frac{(-1)^{n+1}}{n} \\left( \\int_0^1 x^{n^2} e^{-x^2} \\, dx \\right) \\cdot \\frac{\\prod_{k=1}^{n} \\Gamma\\left( \\frac{k}{n+1} \\right)}{\\sqrt{2\\pi n}} \\, e^{\\,i \\pi \\frac{n^2+n}{2}} \\, \\frac{d}{dx}\\Big|_{x=1} \\left( x^n \\ln\\left(1+x^n\\right) \\right)
+$$  
+  `);
+
+  const [previewMarkdown, setPreviewMarkdown] = useState("");
+
+  const handleGetMarkdown = () => {
+    setPreviewMarkdown(content);
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      const url = await uploadFile(file);
+      return url;
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      alert("Failed to upload image. Please try again.");
+      throw error;
     }
   };
 
-  useEffect(() => {
-    console.log(messages);
-  }, [messages]);
   return (
-    <div className="max-w-4xl mx-auto p-6 relative size-full rounded-lg border h-[600px]">
-      <div className="flex flex-col h-full">
-        <Conversation>
-          <ConversationContent>
-            {messages.length === 0 ? (
-              <ConversationEmptyState
-                icon={<MessageSquare className="size-12" />}
-                title="Start a conversation"
-                description="Type a message below to begin chatting"
-              />
-            ) : (
-              messages.map((message) => (
-                <Message from={message.role} key={message.id}>
-                  <MessageContent>
-                    {message.parts.map((part, i) => {
-                      switch (part.type) {
-                        case "text": // we don't use any reasoning or tool calls in this example
-                          return (
-                            <MessageResponse key={`${message.id}-${i}`}>
-                              {part.text}
-                            </MessageResponse>
-                          );
-                        default:
-                          return null;
-                      }
-                    })}
-                  </MessageContent>
-                </Message>
-              ))
-            )}
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
-        <PromptInput
-          onSubmit={handleSubmit}
-          className="mt-4 w-full max-w-2xl mx-auto relative"
-        >
-          <PromptInputTextarea
-            value={input}
-            placeholder="Say something..."
-            onChange={(e) => setInput(e.currentTarget.value)}
-            className="pr-12"
+    <div className="size-full flex flex-col p-4 gap-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Tiptap Editor Demo</h1>
+        <Button onClick={handleGetMarkdown}>Xem Markdown Output</Button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+        <div className="w-full h-full border rounded-lg overflow-hidden">
+          <MinimalTiptap
+            content={content}
+            onChange={setContent}
+            placeholder="Start typing your content here..."
+            className="min-h-[400px] h-full"
+            onImageUpload={handleImageUpload}
           />
-          <PromptInputSubmit
-            status={status === "streaming" ? "streaming" : "ready"}
-            disabled={!input.trim()}
-            className="absolute bottom-1 right-1"
-          />
-        </PromptInput>
+        </div>
+        <div className="w-full h-full border rounded-lg p-4 bg-muted/20 overflow-auto">
+          <h2 className="font-semibold mb-2">Markdown Preview</h2>
+          {previewMarkdown ? (
+            <pre className="whitespace-pre-wrap font-mono text-sm bg-background p-4 rounded-md">
+              {previewMarkdown}
+            </pre>
+          ) : (
+            <p className="text-muted-foreground italic">
+              Nhấn "Xem Markdown Output" để xem kết quả...
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
-};
-export default ConversationDemo;
+}

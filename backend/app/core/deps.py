@@ -5,6 +5,8 @@ from sqlalchemy import select
 from jose import jwt, JWTError
 import uuid
 
+from typing import Optional
+
 from app.db.session import get_db
 from app.models.user import User, RoleEnum
 from app.core.security import SECRET_KEY, ALGORITHM
@@ -63,25 +65,26 @@ async def get_current_user_flexible(request: Request, db: AsyncSession = Depends
     return user
 
 
-async def get_current_user_optional(request: Request, db: AsyncSession = Depends(get_db)):
-    """Get current user from JWT token, returns None if not authenticated"""
-    try:
-        token = request.cookies.get("access_token")
-        if not token:
-            token = request.headers.get("Authorization")
-            if token and token.startswith("Bearer "):
-                token = token.split(" ")[1]
-            else:
-                return None
-        
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = uuid.UUID(payload.get("sub"))
-    except (JWTError, ValueError, AttributeError):
+async def get_current_user_optional(
+    request: Request, 
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    """Get current user from JWT token. Returns None if not authenticated."""
+    token = request.cookies.get("access_token") or request.headers.get("Authorization")
+    
+    if token and token.startswith("Bearer "):
+        token = token.split(" ")[1]
+    elif not token:
         return None
 
-    result = await db.execute(select(User).filter(User.id == user_id))
-    user = result.scalar_one_or_none()
-    return user
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = uuid.UUID(payload.get("sub"))
+        result = await db.execute(select(User).filter(User.id == user_id))
+        user = result.scalar_one_or_none()
+        return user
+    except (JWTError, ValueError, AttributeError):
+        return None
 
 def require_roles(*roles: RoleEnum):
     def wrapper(user: User = Depends(get_current_user)):

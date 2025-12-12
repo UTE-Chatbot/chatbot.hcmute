@@ -123,6 +123,25 @@ export interface DocumentSearchResult {
 }
 
 /**
+ * Chunk search result (for searching chunks across documents)
+ */
+export interface ChunkSearchResult {
+  document: {
+    page_content: string;
+    metadata: {
+      chunk_id?: number;
+      chunk_index?: number;
+      document_id?: number;
+      document_name?: string;
+      topic?: string;
+      subtopic?: string;
+      [key: string]: any;
+    };
+  };
+  score: number;
+}
+
+/**
  * Document list response
  */
 export type DocumentListResponse = PageResponse<DocumentResponse>;

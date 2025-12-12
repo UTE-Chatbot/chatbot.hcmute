@@ -99,3 +99,34 @@
 .tiptap a:hover {
     color: #2563eb;
 }
+
+/* Math formula styles */
+.tiptap-mathematics-render {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    padding: 2px 4px;
+    display: inline-block;
+}
+
+.tiptap-mathematics-render--editable:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.tiptap-mathematics-render.ProseMirror-selectednode {
+    background-color: rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+    outline: none;
+}
+
+.block-math-inner {
+    display: block;
+    padding: 8px 0;
+}
+
+.block-math-error,
+.inline-math-error {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}

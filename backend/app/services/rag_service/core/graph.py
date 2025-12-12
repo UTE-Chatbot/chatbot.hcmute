@@ -96,8 +96,18 @@ class RAG:
             context=context
         ))
 
-        response_message = await self.llm.ainvoke([system_message] + state.get("messages", []))
-        
+
+        try:
+            response_message = await self.llm.ainvoke([system_message] + state.get("messages", []))
+        except asyncio.CancelledError:
+            # Optionally log or handle cleanup here
+            print("Response generation was cancelled.")
+            raise
+        except Exception as e:
+            # Handle other errors gracefully
+            print(f"Error during response generation: {e}")
+            return {**state, "response": "Sorry, an error occurred.", "messages": []}
+
         return {"response": response_message.content, "messages": [response_message]}
 
     async def init_workflow(self):

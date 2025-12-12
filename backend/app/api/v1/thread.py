@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, status, Query, Header
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.utils.messages import apologize
 from typing import Optional, List, Any
 from uuid import UUID
 import uuid
@@ -148,8 +149,8 @@ async def get_global_thread_report(
 @router.post("/{thread_id}/ask")
 async def stream_response(
     thread_id: UUID,
-    request: ChatRequest,
-    raw_request: Request,
+    chat_request: ChatRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
@@ -163,13 +164,14 @@ async def stream_response(
         )
     
     # Extract the User's message 
-    last_message = request.messages[-1]
+    last_message = chat_request.messages[-1]
     user_question = last_message.content
 
     await thread_service.set_thread_title_from_first_question(db, thread_id, user_question)
     
-    client_id = get_client_id(raw_request, current_user)
+    client_id = get_client_id(request, current_user)
     is_admin = current_user and current_user.role == RoleEnum.ADMIN
+    print(f"User is admin: {is_admin}")
     
     allowed, remaining = await thread_service.check_rate_limit(
         db=db,
@@ -190,27 +192,17 @@ async def stream_response(
         
         return StreamingResponse(limit_stream(), media_type="text/plain")
     
-    rag = raw_request.app.state.rag
-
-    # async def stream():
-    #     message_id = str(uuid.uuid4())
-        
-    #     for chunk in "This is a mock streaming response from the server.".split():
-    #         yield chunk + "$$x_2 + y^2$$ " if chunk != "" else ""
-    #         await asyncio.sleep(1)
-
-    #     yield f'd:{json.dumps({"threadId": str(thread_id_val), "messageId": message_id})}\n'
-    #     yield f'd:{json.dumps({"finishReason": "stop"})}\n'
+    rag = request.app.state.rag
     async def stream():
         answer_parts = []
         try:
             async for chunk in rag.execute_workflow(user_question, str(thread_id)):
-                if await raw_request.is_disconnected():
+                if await request.is_disconnected():
                     break
                 answer_parts.append(chunk)
                 yield chunk
         except Exception as e:
-            yield "Nắng hôm nay chói chang quá, say nắng một xíu tôi trở lại ngay nhé."
+            yield apologize()
     
     response = StreamingResponse(stream(), media_type="text/plain")
     response.headers["x-vercel-ai-data-stream"] = "v1"

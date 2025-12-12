@@ -2,29 +2,45 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getCSVTables, deleteCSVTable } from "@/services/csv_table.service";
-import { CSVTableResponse, CSVTableListResponse } from "@/types/csv-table";
+import { CSVTableResponse, CSVTableListResponse, ColumnTypeLabels } from "@/types/csv-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Database, Edit, Trash2, RefreshCw, ExternalLink } from "lucide-react";
+import { Database, Edit, Trash2, RefreshCw, Search, FileSpreadsheet, Plus } from "lucide-react";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty";
 
 interface CSVTableListProps {
+  onAdd?: () => void;
   onEdit?: (table: CSVTableResponse) => void;
-  onDelete?: (tableId: number) => void;
 }
 
-export function CSVTableList({ onEdit, onDelete }: CSVTableListProps) {
+export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<CSVTableListResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pageSize = 10;
+  const [search, setSearch] = useState("");
+  const [viewingTable, setViewingTable] = useState<CSVTableResponse | null>(null);
+  const [deletingTableId, setDeletingTableId] = useState<number | null>(null);
+  const pageSize = 9;
 
   const loadTables = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await getCSVTables({ page, size: pageSize });
+      const response = await getCSVTables({ 
+        page, 
+        size: pageSize,
+        search: search || undefined 
+      });
       setData(response);
     } catch (err) {
       setError("Không thể tải danh sách bảng dữ liệu");
@@ -32,7 +48,7 @@ export function CSVTableList({ onEdit, onDelete }: CSVTableListProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [page]);
+  }, [page, search]);
 
   useEffect(() => {
     loadTables();
@@ -43,27 +59,21 @@ export function CSVTableList({ onEdit, onDelete }: CSVTableListProps) {
   }, [loadTables]);
 
   const handleDelete = async (tableId: number) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa bảng dữ liệu này?")) {
-      return;
-    }
+    setDeletingTableId(tableId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTableId) return;
 
     try {
-      await deleteCSVTable(tableId);
+      await deleteCSVTable(deletingTableId);
+      setDeletingTableId(null);
       loadTables();
-      onDelete?.(tableId);
     } catch (err) {
       console.error("Error deleting table:", err);
       alert("Không thể xóa bảng dữ liệu. Vui lòng thử lại.");
     }
   };
-
-  if (isLoading && !data) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -80,105 +90,149 @@ export function CSVTableList({ onEdit, onDelete }: CSVTableListProps) {
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / pageSize);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-muted-foreground">
-          Tổng số: {total} bảng dữ liệu
+  const renderListContent = () => {
+    if (isLoading && !data) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-          Làm mới
-        </Button>
-      </div>
+      );
+    }
 
-      <div className="space-y-3">
+    if (tables.length === 0) {
+      return (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileSpreadsheet />
+            </EmptyMedia>
+            <EmptyDescription>
+              {search
+                ? "Không tìm thấy bảng dữ liệu phù hợp"
+                : "Chưa có bảng dữ liệu nào"}
+            </EmptyDescription>
+            {!search && onAdd && (
+              <Button onClick={onAdd} variant="outline" className="mt-4">
+                <Plus className="w-4 h-4 mr-2" /> Tạo bảng dữ liệu
+              </Button>
+            )}
+          </EmptyHeader>
+        </Empty>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tables.map((table: CSVTableResponse) => (
-          <Card key={table.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Database className="w-5 h-5" />
-                    {table.name}
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    {table.description || "Không có mô tả"}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline">
+          <Card
+            key={table.id}
+            className="overflow-hidden hover:shadow-md transition-shadow flex flex-col bg-white"
+          >
+            <CardHeader className="pb-3 flex-1">
+                <div className="flex justify-between items-start gap-2">
+           
+                <CardTitle    className="text-lg font-medium leading-tight line-clamp-2"
+               >
+                  {table.name}
+                </CardTitle>
+                <Badge variant="outline" className="shrink-0">
                   {table.columns.length} cột
                 </Badge>
               </div>
+              <CardDescription className="line-clamp-2">
+                {table.description || "Không có mô tả"}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+               <CardContent className="px-0">
               <div className="space-y-3">
-                {/* URL */}
-                {table.url && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                    <a
-                      href={table.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline truncate"
-                    >
-                      {table.url}
-                    </a>
-                  </div>
-                )}
-
                 {/* Columns Preview */}
-                <div className="flex flex-wrap gap-2">
-                  {table.columns.slice(0, 5).map((col, idx) => (
+                <div className="flex flex-wrap gap-2 px-6">
+                  {table.columns.slice(0, 3).map((col, idx) => (
                     <Badge key={idx} variant="secondary" className="text-xs">
-                      {col.name}: {col.type}
+                      {col.name}: {ColumnTypeLabels[col.type]}
                     </Badge>
                   ))}
-                  {table.columns.length > 5 && (
+                  {table.columns.length > 3 && (
                     <Badge variant="secondary" className="text-xs">
-                      +{table.columns.length - 5} cột khác
+                      +{table.columns.length - 3} cột
                     </Badge>
                   )}
                 </div>
 
+                {/* Timestamp */}
+                <div className="text-xs px-6 text-muted-foreground">
+                  Tạo lúc: {new Date(table.created_at).toLocaleString("vi-VN")}
+                </div>
+
                 {/* Actions */}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-xs text-muted-foreground">
-                    Tạo lúc: {new Date(table.created_at).toLocaleString("vi-VN")}
-                  </div>
-                  <div className="flex gap-2">
-                    {onEdit && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(table)}
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Xem chi tiết
-                      </Button>
-                    )}
+                <div className="px-6 flex gap-2 pt-2 border-t mt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewingTable(table)}
+                  >
+                    <Database className="w-4 h-4 mr-1" />
+                   Chi tiết
+                  </Button>
+                  {onEdit && (
                     <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(table.id)}
+                      variant="outline"
+                      onClick={() => onEdit(table)}
                     >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Xóa
+                      <Edit className="w-4 h-4 mr-1" />
+                      Chỉnh sửa
                     </Button>
-                  </div>
+                  )}
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDelete(table.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Xóa
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+    );
+  };
 
+  return (
+    <div className="space-y-6">
+      {/* Top Bar: Search, Add, Refresh */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-lg border shadow-sm sticky top-0 z-10">
+        <div className="flex items-center gap-4 w-full">
+          <InputGroup className="flex-1 max-w-md">
+            <InputGroupInput
+              value={search}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+              placeholder="Tìm bảng dữ liệu theo tên"
+            />
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {onAdd && (
+            <Button onClick={onAdd}>
+              <Plus className="w-4 h-4 mr-2" />
+              Thêm bảng
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            Làm mới
+          </Button>
+        </div>
+      </div>
+
+      {/* List Content */}
+      {renderListContent()}
+
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-6">
           <Button
@@ -202,6 +256,114 @@ export function CSVTableList({ onEdit, onDelete }: CSVTableListProps) {
           </Button>
         </div>
       )}
+
+      {/* Detail Dialog */}
+      <Dialog
+        open={!!viewingTable}
+        onOpenChange={(open) => !open && setViewingTable(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="w-5 h-5" />
+              {viewingTable?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {viewingTable?.description || "Không có mô tả"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewingTable && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">File CSV:</h3>
+                <a
+                  href={viewingTable.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline break-all"
+                >
+                  {viewingTable.url}
+                </a>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Cấu trúc bảng:</h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2 font-semibold">Tên cột</th>
+                        <th className="text-left p-2 font-semibold">Kiểu dữ liệu</th>
+                        <th className="text-left p-2 font-semibold">Phân loại</th>
+                        <th className="text-left p-2 font-semibold">Mô tả</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewingTable.columns.map((col, idx) => (
+                        <tr key={idx} className="border-t">
+                          <td className="p-2 font-mono">{col.name}</td>
+                          <td className="p-2">
+                            <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                              {ColumnTypeLabels[col.type]}
+                            </span>
+                          </td>
+                          <td className="p-2">
+                            {col.is_categorical ? (
+                              <span className="text-green-600">✓</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-muted-foreground">
+                            {col.description || "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Tạo lúc: {new Date(viewingTable.created_at).toLocaleString("vi-VN")}
+                {viewingTable.updated_at && (
+                  <>
+                    {" • "}
+                    Cập nhật: {new Date(viewingTable.updated_at).toLocaleString("vi-VN")}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!deletingTableId}
+        onOpenChange={(open) => !open && setDeletingTableId(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa bảng dữ liệu</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa bảng dữ liệu này?
+              <br />
+              Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDeletingTableId(null)}>
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Xóa
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -54,6 +54,7 @@ const Example = () => {
       headers: {
         "X-Visitor-Id": visitorId || "",
       },
+      credentials: "include",
     });
   }, [threadId, visitorId]);
 

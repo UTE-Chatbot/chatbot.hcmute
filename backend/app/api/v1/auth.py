@@ -46,11 +46,14 @@ async def login(data: Login, db: AsyncSession = Depends(get_db)):
         user = await login_email(db, data.email, data.password)
         token = create_access_token({"sub": str(user.id), "role": user.role.value})
         
+
+        
+
         response = JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"access_token": token}
         )
-        
+
         response.set_cookie(
             key="access_token",
             value=token,
@@ -59,7 +62,7 @@ async def login(data: Login, db: AsyncSession = Depends(get_db)):
             samesite="lax",
             max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60  
         )
-        
+
         return response
     except Exception as e:
         return JSONResponse(
@@ -95,6 +98,7 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
             "role": google_user.role.value
         })
 
+
         response = RedirectResponse(
             url=f"{settings.frontend_url}/auth/google/success" 
         )
@@ -107,6 +111,7 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
             samesite="lax",
             max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
+
 
         return response
 

@@ -27,7 +27,7 @@ pnpm add @radix-ui/react-label @radix-ui/react-checkbox
 - **MarkdownEditor** (`components/pages/data/markdown-editor.tsx`)
   - Full markdown editor with preview
   - LaTeX support (inline with `$...$` and block with `$$...$$`)
-  - Chunk marker support (`<<<CHUNK>>>`)
+  - Chunk marker support (`<<<CHUNK_SEPARATOR>>>`)
   - Fullscreen mode
   - Live preview with syntax highlighting
 
@@ -61,7 +61,7 @@ pnpm add @radix-ui/react-label @radix-ui/react-checkbox
 3. **View Details** - See full table structure in modal
 
 ### Chunk Markers
-- Use `<<<CHUNK>>>` in the markdown editor to mark chunk boundaries
+- Use `<<<CHUNK_SEPARATOR>>>` in the markdown editor to mark chunk boundaries
 - These markers are visually highlighted in the preview
 - System recognizes these during chunking process
 

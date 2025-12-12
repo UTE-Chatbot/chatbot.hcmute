@@ -34,7 +34,8 @@ import {
   ArrowRight,
   Trash2,
 } from "lucide-react";
-import { TiptapEditor } from "./tiptap-editor";
+import { MinimalTiptap } from "@/components/ui/shadcn-io/minimal-tiptap";
+import { uploadFile } from "@/services/file.service";
 import {
   Dialog,
   DialogContent,
@@ -192,15 +193,15 @@ export function DocumentDetail({ documentId, onBack }: DocumentDetailProps) {
       </div>
 
       {/* Chunks List */}
-      <Card className="bg-white">
-        <CardHeader className="bg-white">
+      <Card className="bg-white flex flex-col max-h-[600px]">
+        <CardHeader className="bg-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Danh sách Chunks</CardTitle>
             </div>
           </div>
         </CardHeader>
-        <CardContent className=" bg-white">
+        <CardContent className="bg-white flex-1 overflow-y-auto">
           {chunks.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -295,10 +296,21 @@ export function DocumentDetail({ documentId, onBack }: DocumentDetailProps) {
           <div className="h-full overflow-auto p-6">
             <div className="space-y-4 h-full  mx-auto">
               <div className="space-y-2 h-full">
-                <TiptapEditor
+                <MinimalTiptap
                   content={editedContent}
                   onChange={setEditedContent}
                   placeholder="Nhập nội dung chunk..."
+                  className="min-h-[400px] h-full"
+                  onImageUpload={async (file: File) => {
+                    try {
+                      const url = await uploadFile(file);
+                      return url;
+                    } catch (error) {
+                      console.error("Failed to upload image:", error);
+                      alert("Không thể tải lên hình ảnh. Vui lòng thử lại.");
+                      throw error;
+                    }
+                  }}
                 />
               </div>
             </div>

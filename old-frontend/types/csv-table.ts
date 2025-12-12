@@ -16,6 +16,24 @@ export enum ColumnType {
 }
 
 /**
+ * Vietnamese labels for column types (non-technical)
+ */
+export const ColumnTypeLabels: Record<ColumnType, string> = {
+  [ColumnType.TEXT]: "Chữ",
+  [ColumnType.BIGINT]: "Số nguyên",
+  [ColumnType.DECIMAL]: "Số thập phân",
+};
+
+/**
+ * Descriptions for column types (non-technical)
+ */
+export const ColumnTypeDescriptions: Record<ColumnType, string> = {
+  [ColumnType.TEXT]: "Dùng cho văn bản, tên, địa chỉ...",
+  [ColumnType.BIGINT]: "Dùng cho số nguyên như ID, số lượng, năm...",
+  [ColumnType.DECIMAL]: "Dùng cho số có dấu phẩy như giá tiền, điểm số...",
+};
+
+/**
  * Column schema for input (create/update)
  */
 export interface CSVTableColumnInput {

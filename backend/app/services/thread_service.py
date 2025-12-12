@@ -108,6 +108,7 @@ async def check_rate_limit(
         limit_per_day = settings.question_limit_per_day
     
     if is_admin:
+        print("Admin user - no rate limit applied")
         return True, 0
     
     now = datetime.now()

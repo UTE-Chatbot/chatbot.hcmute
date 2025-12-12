@@ -16,6 +16,7 @@ import type {
   DocumentChunkUpdate,
   DocumentChunkListResponse,
   DocumentSearchResult,
+  ChunkSearchResult,
 } from "@/types/document";
 
 /**
@@ -294,6 +295,32 @@ export const searchDocuments = async (
   query: string
 ): Promise<DocumentSearchResult[]> => {
   const response = await api.post<DocumentSearchResult[]>(
+    "/documents/search",
+    null,
+    {
+      params: { query },
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Search chunks across multiple documents using hybrid search (text + embedding)
+ * @param query - Search query string
+ * @returns Promise<ChunkSearchResult[]>
+ *
+ * @example
+ * const results = await searchChunks("machine learning");
+ * results.forEach(result => {
+ *   console.log(`Score: ${result.score}`);
+ *   console.log(`Content: ${result.document.page_content}`);
+ *   console.log(`Metadata:`, result.document.metadata);
+ * });
+ */
+export const searchChunks = async (
+  query: string
+): Promise<ChunkSearchResult[]> => {
+  const response = await api.post<ChunkSearchResult[]>(
     "/documents/search",
     null,
     {

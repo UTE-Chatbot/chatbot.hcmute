@@ -17,7 +17,7 @@ RAW_PREFIX = "raw"
 @router.post("/upload", status_code=status.HTTP_201_CREATED, response_class=JSONResponse)
 async def upload_file_to_minio(
     file: UploadFile,
-    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
+    # current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     try:
         result = upload_file(RAW_PREFIX, file=file)

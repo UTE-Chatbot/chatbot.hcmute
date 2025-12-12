@@ -17,32 +17,32 @@ import type {
  * Get paginated list of CSV tables with filtering, sorting, and searching
  * @param params - Query parameters for filtering, sorting, pagination, and search
  * @returns Promise<CSVTableListResponse>
- * 
+ *
  * @example
  * // Basic pagination
  * getCSVTables({ page: 1, size: 10 })
- * 
+ *
  * @example
  * // With filtering
- * getCSVTables({ 
- *   filters: { 
+ * getCSVTables({
+ *   filters: {
  *     name: { $contains: "student" }
  *   },
  *   page: 1,
  *   size: 20
  * })
- * 
+ *
  * @example
  * // With sorting
- * getCSVTables({ 
+ * getCSVTables({
  *   sort: "created_at:desc",
  *   page: 1,
  *   size: 10
  * })
- * 
+ *
  * @example
  * // With search
- * getCSVTables({ 
+ * getCSVTables({
  *   search: "enrollment",
  *   page: 1,
  *   size: 10
@@ -53,7 +53,7 @@ export const getCSVTables = async (
 ): Promise<CSVTableListResponse> => {
   const queryString = buildQueryString(params);
   const url = `/csv_tables${queryString ? `?${queryString}` : ""}`;
-  
+
   const response = await api.get<CSVTableListResponse>(url);
   return response.data;
 };
@@ -62,16 +62,14 @@ export const getCSVTables = async (
  * Get a single CSV table by ID
  * @param tableId - The table ID
  * @returns Promise<CSVTableResponse>
- * 
+ *
  * @example
  * const table = await getCSVTableById(123);
  */
 export const getCSVTableById = async (
   tableId: number
 ): Promise<CSVTableResponse> => {
-  const response = await api.get<CSVTableResponse>(
-    `/csv_tables/${tableId}`
-  );
+  const response = await api.get<CSVTableResponse>(`/csv_tables/${tableId}`);
   return response.data;
 };
 
@@ -79,7 +77,7 @@ export const getCSVTableById = async (
  * Create a new CSV table
  * @param data - CSV table creation payload
  * @returns Promise<CSVTableResponse>
- * 
+ *
  * @example
  * const table = await createCSVTable({
  *   name: "student_enrollment",
@@ -104,7 +102,7 @@ export const getCSVTableById = async (
 export const createCSVTable = async (
   data: CSVTableCreate
 ): Promise<CSVTableResponse> => {
-  const response = await api.post<CSVTableResponse>("/api/v1/csv_tables", data);
+  const response = await api.post<CSVTableResponse>("/csv_tables", data);
   return response.data;
 };
 
@@ -113,7 +111,7 @@ export const createCSVTable = async (
  * @param tableId - The table ID
  * @param data - CSV table update payload
  * @returns Promise<CSVTableResponse>
- * 
+ *
  * @example
  * const updated = await updateCSVTable(123, {
  *   name: "updated_table_name",
@@ -135,7 +133,7 @@ export const updateCSVTable = async (
  * Delete a CSV table
  * @param tableId - The table ID
  * @returns Promise<void>
- * 
+ *
  * @example
  * await deleteCSVTable(123);
  */
@@ -146,7 +144,7 @@ export const deleteCSVTable = async (tableId: number): Promise<void> => {
 /**
  * Get database schema from the actual database
  * @returns Promise<CSVTableResponse[]>
- * 
+ *
  * @example
  * const schema = await getDatabaseSchema();
  * schema.forEach(table => {
@@ -155,9 +153,7 @@ export const deleteCSVTable = async (tableId: number): Promise<void> => {
  * });
  */
 export const getDatabaseSchema = async (): Promise<CSVTableResponse[]> => {
-  const response = await api.get<CSVTableResponse[]>(
-    "/api/v1/csv_tables/schema"
-  );
+  const response = await api.get<CSVTableResponse[]>("/csv_tables/schema");
   return response.data;
 };
 

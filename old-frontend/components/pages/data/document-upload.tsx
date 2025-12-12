@@ -63,7 +63,7 @@ import {
   ChunkMode,
 } from "@/types/document";
 import { TopicData } from "@/types/topic";
-import TextEditor from "./text-editor";
+import { MinimalTiptap } from "@/components/ui/shadcn-io/minimal-tiptap";
 import { cn } from "@/lib/utils";
 
 interface DocumentUploadProps {
@@ -96,7 +96,7 @@ export function DocumentUpload({
   const [newSubtopicName, setNewSubtopicName] = useState("");
 
   const [fullText, setFullText] = useState("");
-  const [chunkMode, setChunkMode] = useState<ChunkMode>(ChunkMode.LLM_CHUNK);
+  const [chunkMode, setChunkMode] = useState<ChunkMode>(ChunkMode.DELIMITER_SPLIT);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,13 +167,17 @@ export function DocumentUpload({
       if (initialData.file_path) {
         setExistingFilePath(initialData.file_path);
       }
-      // If there's full text, we could populate it, but maybe better not to fetching large content?
-      // For now, let's leave full text empty unless we want to show it.
-      // If the user wants to update text, they can paste new text.
-      // If they want to keep existing, they leave it empty.
+
+      if (initialData.full_text) {
+        setFullText(initialData.full_text);
+      }
     }
   }, [initialData]);
 
+
+  useEffect(() => {
+    console.log("Full text updated:", fullText);
+  },[fullText])
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -438,7 +442,7 @@ export function DocumentUpload({
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 shrink-0 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={(e) => {
+                            onClick={(e:any) => {
                               e.stopPropagation();
                               handleDeleteTopic(t);
                             }}
@@ -510,7 +514,7 @@ export function DocumentUpload({
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 shrink-0 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={(e) => {
+                            onClick={(e:any) => {
                               e.stopPropagation();
                               handleDeleteSubtopic(s);
                             }}
@@ -540,6 +544,36 @@ export function DocumentUpload({
           </div>
         </div>
 
+        {/* Chunk Mode - applies to both file and text input */}
+        <div className="space-y-2">
+          <Label htmlFor="chunkMode">Phương thức chia nhỏ</Label>
+          <Select
+            value={chunkMode}
+            onValueChange={(value) =>
+              setChunkMode(value as ChunkMode)
+            }
+            disabled={isUploading}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ChunkMode.LLM_CHUNK}>
+                Chia tự động bằng AI
+              </SelectItem>
+              <SelectItem value={ChunkMode.DELIMITER_SPLIT}>
+                Chia theo dấu phân cách
+              </SelectItem>
+              <SelectItem value={ChunkMode.MARKDOWN_HEADING_SPLIT}>
+                Chia theo tiêu đề
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Chế độ chia nhỏ sẽ được áp dụng khi bạn nhấn "{initialData ? "Cập nhật tài liệu" : "Tạo tài liệu"}"
+          </p>
+        </div>
+
         <div className="flex w-full  flex-col gap-6">
           <Tabs
             defaultValue="file"
@@ -552,33 +586,6 @@ export function DocumentUpload({
             <TabsContent value="file">
               <Card className="bg-white">
                 <CardContent className="">
-                  {/* Chunk Mode */}
-                  <div className="space-y-2">
-                    <Label htmlFor="chunkMode">Phương thức chia nhỏ</Label>
-                    <Select
-                      value={chunkMode}
-                      onValueChange={(value) =>
-                        setChunkMode(value as ChunkMode)
-                      }
-                      disabled={isUploading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={ChunkMode.LLM_CHUNK}>
-                          Chia tự động bằng AI
-                        </SelectItem>
-                        <SelectItem value={ChunkMode.DELIMITER_SPLIT}>
-                          Chia theo dấu phân cách
-                        </SelectItem>
-                        <SelectItem value={ChunkMode.MARKDOWN_HEADING_SPLIT}>
-                          Chia theo tiêu đề
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   {/* File Upload */}
                   <div className="space-y-2">
                     <Label>Tải lên file (tuỳ chọn)</Label>
@@ -653,13 +660,24 @@ export function DocumentUpload({
               </Card>
             </TabsContent>
             <TabsContent value="text">
-              <Card className="bg-white">
-                <CardContent className="">
-                  {/* Full Text Input (alternative to file upload) */}
-                  <div className="space-y-8">
-                    <Label>Nhập văn bản</Label>
-                    <TextEditor />
-                  </div>
+              <Card className="!p-0 bg-white border-none">
+                <CardContent className="!p-0">
+                    <MinimalTiptap
+                      content={fullText}
+                      onChange={setFullText}
+                      placeholder="Bắt đầu nhập nội dung..."
+                      className="min-h-[400px]"
+                      onImageUpload={async (file: File) => {
+                        try {
+                          const url = await uploadFile(file);
+                          return url;
+                        } catch (error) {
+                          console.error("Failed to upload image:", error);
+                          alert("Không thể tải lên hình ảnh. Vui lòng thử lại.");
+                          throw error;
+                        }
+                      }}
+                    />
                 </CardContent>
               </Card>
             </TabsContent>
