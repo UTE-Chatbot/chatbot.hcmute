@@ -8,16 +8,14 @@ import { DocumentUpload } from "@/components/pages/data/document-upload";
 import { CSVTableList } from "@/components/pages/data/csv-table-list";
 import { CSVTableForm } from "@/components/pages/data/csv-table-form";
 import { CSVTableResponse } from "@/types/csv-table";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export default function DataManagementPage() {
   const [activeTab, setActiveTab] = useState("table");
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [showCSVTableForm, setShowCSVTableForm] = useState(false);
-  const [editingCSVTable, setEditingCSVTable] = useState<CSVTableResponse | null>(null);
+  const [editingCSVTable, setEditingCSVTable] =
+    useState<CSVTableResponse | null>(null);
   const [documentListKey, setDocumentListKey] = useState(0);
   const [csvTableListKey, setCsvTableListKey] = useState(0);
 
@@ -66,8 +64,8 @@ export default function DataManagementPage() {
         </TabsList>
 
         <TabsContent value="table" className="mt-6 space-y-4">
-          <CSVTableList 
-            key={csvTableListKey} 
+          <CSVTableList
+            key={csvTableListKey}
             onAdd={handleAddCSVTable}
             onEdit={handleEditCSVTable}
           />
@@ -88,7 +86,10 @@ export default function DataManagementPage() {
           className="mb-8 flex h-auto max-h-[calc(100vh-2rem)] min-w-[calc(100vw-2rem)] flex-col justify-between gap-0"
         >
           <div className="flex-1 overflow-auto p-6">
-            <DocumentUpload onSuccess={handleDocumentUploadSuccess} />
+            <DocumentUpload
+              onSuccess={handleDocumentUploadSuccess}
+              onCancel={() => setShowDocumentUpload(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -100,7 +101,7 @@ export default function DataManagementPage() {
           className="mb-8 flex h-auto max-h-[calc(100vh-2rem)] min-w-[calc(100vw-2rem)] flex-col justify-between gap-0"
         >
           <div className="flex-1 overflow-auto p-6">
-            <CSVTableForm 
+            <CSVTableForm
               initialData={editingCSVTable || undefined}
               onSuccess={handleCSVTableFormSuccess}
               onCancel={() => {

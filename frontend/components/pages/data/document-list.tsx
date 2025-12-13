@@ -816,6 +816,7 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
                 <DocumentUpload
                   initialData={editingDocument}
                   onSuccess={handleEditSuccess}
+                  onCancel={() => setEditingDocument(null)}
                 />
               </div>
             </div>
