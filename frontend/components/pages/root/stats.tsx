@@ -11,7 +11,6 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { AuroraText } from "@/components/ui/aurora-text";
-import { MagicCard } from "@/components/ui/magic-card";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
 interface Stat {
