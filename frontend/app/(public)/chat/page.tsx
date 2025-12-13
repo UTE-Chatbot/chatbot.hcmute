@@ -52,6 +52,7 @@ const Example = () => {
   const [threadId, setThreadId] = useState<string | null>(null);
   const threadIdRef = useRef<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const initVisitor = async () => {
@@ -89,16 +90,23 @@ const Example = () => {
 
   useEffect(() => {
     if (threadId && pendingMessage && transport) {
-      sendMessage({
-        text: pendingMessage,
-      });
-      setPendingMessage(null);
+      try {
+        sendMessage({
+          text: pendingMessage,
+        });
+      } catch (error) {
+        toast.error("Failed to send message");
+      } finally {
+        setPendingMessage(null);
+        setIsSubmitting(false);
+      }
     }
   }, [threadId, pendingMessage, transport, sendMessage]);
 
   const handleSubmit = async (message: PromptInputMessage) => {
-    if (!message.text) return;
+    if (!message.text || isSubmitting) return;
 
+    setIsSubmitting(true);
     setInput("");
 
     if (!threadId) {
@@ -111,6 +119,7 @@ const Example = () => {
         console.error(e);
         toast.error("Failed to create chat thread");
         setInput(message.text);
+        setIsSubmitting(false);
         return;
       }
     } else {
@@ -120,12 +129,15 @@ const Example = () => {
         } as any);
       } catch (error) {
         setInput(message.text);
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
-    if (status === "streaming") return;
+    if (status === "streaming" || status === "submitted" || isSubmitting)
+      return;
     await handleSubmit({ text: suggestion } as any);
   };
 
@@ -135,6 +147,7 @@ const Example = () => {
     setThreadId(null);
     threadIdRef.current = null;
     setInput("");
+    setIsSubmitting(false);
   };
 
   return (
@@ -150,6 +163,7 @@ const Example = () => {
           status={status}
           useMicrophone={useMicrophone}
           setUseMicrophone={setUseMicrophone}
+          isSubmitting={isSubmitting}
         />
       ) : (
         <ChatMessageList
@@ -163,6 +177,7 @@ const Example = () => {
           status={status}
           useMicrophone={useMicrophone}
           setUseMicrophone={setUseMicrophone}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>

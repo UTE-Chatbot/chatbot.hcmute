@@ -52,6 +52,7 @@ import {
   Check,
   ChevronsUpDown,
   Trash2,
+  ArrowRight,
 } from "lucide-react";
 import { uploadFile } from "@/services/file.service";
 import { createDocument, updateDocument } from "@/services/document.service";
@@ -69,11 +70,13 @@ import { cn } from "@/lib/utils";
 interface DocumentUploadProps {
   initialData?: DocumentResponse | null;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 export function DocumentUpload({
   initialData,
   onSuccess,
+  onCancel,
 }: DocumentUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -96,9 +99,8 @@ export function DocumentUpload({
   const [newSubtopicName, setNewSubtopicName] = useState("");
 
   const [fullText, setFullText] = useState("");
-  const [chunkMode, setChunkMode] = useState<ChunkMode>(
-    ChunkMode.DELIMITER_SPLIT
-  );
+  const [chunkMode, setChunkMode] = useState<ChunkMode>(ChunkMode.LLM_CHUNK);
+  const [activeTab, setActiveTab] = useState("file");
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -168,10 +170,14 @@ export function DocumentUpload({
       }
       if (initialData.file_path) {
         setExistingFilePath(initialData.file_path);
+        setActiveTab("file");
       }
 
       if (initialData.full_text) {
         setFullText(initialData.full_text);
+        if (!initialData.file_path) {
+          setActiveTab("text");
+        }
       }
     }
   }, [initialData]);
@@ -374,15 +380,29 @@ export function DocumentUpload({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          {initialData ? "Cập nhật tài liệu" : "Tạo tài liệu mới"}
-        </h2>
-        <p className="text-muted-foreground mt-1">
-          {initialData
-            ? "Cập nhật thông tin hoặc nội dung tài liệu."
-            : "Tải lên file hoặc nhập nội dung văn bản. Hệ thống sẽ tự động phân tích và chia nhỏ tài liệu."}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            {initialData ? "Cập nhật tài liệu" : "Tạo tài liệu mới"}
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            {initialData
+              ? "Cập nhật thông tin hoặc nội dung tài liệu."
+              : "Tải lên file hoặc nhập nội dung văn bản. Hệ thống sẽ tự động phân tích và chia nhỏ tài liệu."}
+          </p>
+        </div>
+        {onCancel && (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onCancel}
+            disabled={isUploading}
+            size="sm"
+          >
+            <ArrowRight className="mr-2 h-4 w-4 rotate-180" />
+            Thoát
+          </Button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -576,7 +596,8 @@ export function DocumentUpload({
 
         <div className="flex w-full  flex-col gap-6">
           <Tabs
-            defaultValue="file"
+            value={activeTab}
+            onValueChange={setActiveTab}
             className="w-full p-2 rounded-3xl border-1 border-border"
           >
             <TabsList>

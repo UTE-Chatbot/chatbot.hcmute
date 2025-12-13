@@ -17,6 +17,7 @@ interface ChatEmptyStateProps {
   status: "submitted" | "streaming" | "ready" | "error";
   useMicrophone: boolean;
   setUseMicrophone: (use: boolean) => void;
+  isSubmitting: boolean;
 }
 
 const ChatEmptyState = ({
@@ -29,6 +30,7 @@ const ChatEmptyState = ({
   status,
   useMicrophone,
   setUseMicrophone,
+  isSubmitting,
 }: ChatEmptyStateProps) => {
   return (
     <div className="flex size-full flex-col items-center justify-center gap-8 md:gap-24 pb-12 pt-12 px-4">
@@ -73,6 +75,11 @@ const ChatEmptyState = ({
                 onClick={() => handleSuggestionClick(suggestion.description)}
                 suggestion={suggestion.description}
                 className="h-auto py-2"
+                disabled={
+                  status === "streaming" ||
+                  status === "submitted" ||
+                  isSubmitting
+                }
               >
                 <div className="flex items-center gap-2">
                   {suggestion.icon}

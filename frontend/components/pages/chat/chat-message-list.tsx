@@ -123,6 +123,7 @@ interface ChatMessageListProps {
   status: "submitted" | "streaming" | "ready" | "error";
   useMicrophone: boolean;
   setUseMicrophone: (use: boolean) => void;
+  isSubmitting: boolean;
 }
 
 const ChatMessageList = ({
@@ -136,6 +137,7 @@ const ChatMessageList = ({
   status,
   useMicrophone,
   setUseMicrophone,
+  isSubmitting,
 }: ChatMessageListProps) => {
   return (
     <>
@@ -212,6 +214,9 @@ const ChatMessageList = ({
               onClick={() => handleSuggestionClick(suggestion.description)}
               suggestion={suggestion.description}
               className="h-auto py-2"
+              disabled={
+                status === "streaming" || status === "submitted" || isSubmitting
+              }
             >
               <div className="flex items-center gap-2">
                 {suggestion.icon}
