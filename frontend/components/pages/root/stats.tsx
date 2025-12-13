@@ -14,7 +14,15 @@ import { AuroraText } from "@/components/ui/aurora-text";
 import { MagicCard } from "@/components/ui/magic-card";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
-const STATS = [
+interface Stat {
+  value?: number;
+  display?: string;
+  suffix?: string;
+  label: string;
+  description: string;
+}
+
+const STATS: Stat[] = [
   {
     value: 63,
     suffix: "+",
@@ -165,7 +173,7 @@ export default function Stats() {
                           </>
                         ) : (
                           <span className="text-primary text-5xl font-bold">
-                            {stat.display}
+                            {stat?.display}
                           </span>
                         )}
                       </div>
