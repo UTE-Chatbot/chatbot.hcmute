@@ -30,8 +30,11 @@ export function constructMetadata({
     description: description || siteConfig.description,
     keywords: siteConfig.keywords,
     openGraph: {
-      title,
-      description,
+      title: title === siteConfig.name ? siteConfig.shortName : title,
+      description:
+        description === siteConfig.description
+          ? siteConfig.ogDescription
+          : description,
       url: siteConfig.url,
       siteName: siteConfig.name,
       images: [
@@ -47,8 +50,11 @@ export function constructMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
+      title: title === siteConfig.name ? siteConfig.shortName : title,
+      description:
+        description === siteConfig.description
+          ? siteConfig.ogDescription
+          : description,
       images: [image],
       creator: "@hcmute",
     },

@@ -12,6 +12,9 @@ import AuthProvider from "@/components/providers/auth-provider";
 export const metadata: Metadata = constructMetadata({});
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
   colorScheme: "light",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "white" },
@@ -25,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <head>
         <link
           rel="apple-touch-icon"
