@@ -30,12 +30,6 @@ const STATS = [
       "Trường có cơ sở chính 174.247m²; cơ sở Lê Văn Việt 44.408m²; Phân hiệu Tỉnh Bình Phước: 90.000 m²",
   },
   {
-    display: "Top 421-430",
-    label: "QSRanking 2025",
-    description:
-      "Top 421-430 trường đại học hàng đầu châu Á, Top 73 khu vực ĐNA, Top 9 trường đại học hàng đầu Việt Nam",
-  },
-  {
     value: 98,
     suffix: "%",
     label: "Sinh viên có việc làm ngay",
