@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -15,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import React from "react";
 import { motion } from "framer-motion";
 import { Button } from "../ui/button";
@@ -96,48 +96,47 @@ export function ContactModal({ trigger, open, setOpen }: ContactModalProps) {
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent
         showCloseButton={false}
-        className="mb-8 flex overflow-auto h-auto max-h-[calc(100vh-2rem)] min-w-[calc(100vw-2rem)] flex-col justify-between gap-0 p-[2rem]"
+        className="mb-8 flex flex-col justify-between gap-0 p-4 sm:p-8 overflow-auto h-auto max-h-[85vh] w-[90vw] sm:w-full sm:max-w-4xl"
       >
         <div className="flex items-center justify-between gap-8">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
               Ban tư vấn tuyển sinh
             </h2>
           </div>
-          <Button
-            variant="destructive"
-            effect="expandIcon"
-            iconPlacement="right"
-            icon={ArrowRight}
-            onClick={() => {
-              setOpen?.(false);
-            }}
-          >
-            Thoát
-          </Button>
+          <DialogClose asChild>
+            <Button
+              variant="destructive"
+              effect="expandIcon"
+              iconPlacement="right"
+              icon={ArrowRight}
+            >
+              Thoát
+            </Button>
+          </DialogClose>
         </div>
 
-        <ScrollArea className="flex-1 mt-4 pr-4">
+        <div className="flex-1 mt-4 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             className="space-y-6"
           >
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 whitespace-normal break-words">
               Tư vấn hướng nghiệp và tuyển sinh đóng vai trò quan trọng trong
               việc hỗ trợ thí sinh hiểu rõ về quy trình tuyển sinh, các cơ hội
               học vụ và đưa ra lựa chọn phù hợp với năng lực và sở thích của thí
               sinh. Trường Đại học Sư phạm Kỹ thuật TP.HCM tự hào khi có một đội
               ngũ tư vấn viên tư vấn hướng nghiệp và tuyển sinh chuyên nghiệp:
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <p className="font-semibold">Tổng Đài:</p>
               <div className="text-primary font-medium">
                 <a href="tel:02837225724" className="hover:underline">
                   028. 3722 5724
                 </a>
-                <span>-</span>
+                <span> - </span>
                 <a href="tel:02838961333" className="hover:underline">
                   028. 3896 1333
                 </a>
@@ -148,14 +147,22 @@ export function ContactModal({ trigger, open, setOpen }: ContactModalProps) {
               <p className="font-semibold text-center">
                 Hotline tư vấn hướng nghiệp tuyển sinh chung:
               </p>
-              <div className="border rounded-lg overflow-hidden shadow-sm">
-                <Table>
+              <div className="border rounded-lg overflow-x-auto shadow-sm max-w-[calc(100vw-4rem)] sm:max-w-none">
+                <Table className="min-w-[600px]">
                   <TableHeader className="bg-muted">
                     <TableRow>
-                      <TableHead className="w-[50px] text-center">TT</TableHead>
-                      <TableHead>Họ và tên tư vấn viên</TableHead>
-                      <TableHead>Chức vụ</TableHead>
-                      <TableHead>Điện thoại</TableHead>
+                      <TableHead className="w-[50px] text-center whitespace-nowrap">
+                        TT
+                      </TableHead>
+                      <TableHead className="whitespace-nowrap">
+                        Họ và tên tư vấn viên
+                      </TableHead>
+                      <TableHead className="whitespace-nowrap">
+                        Chức vụ
+                      </TableHead>
+                      <TableHead className="whitespace-nowrap">
+                        Điện thoại
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -164,12 +171,16 @@ export function ContactModal({ trigger, open, setOpen }: ContactModalProps) {
                         key={advisor.name}
                         className="hover:bg-muted/50 transition-colors"
                       >
-                        <TableCell className="text-center font-medium">
+                        <TableCell className="text-center font-medium whitespace-nowrap">
                           {index + 1}
                         </TableCell>
-                        <TableCell>{advisor.name}</TableCell>
-                        <TableCell>{advisor.role}</TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {advisor.name}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {advisor.role}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <a
                             href={`tel:${advisor.phone}`}
                             className="text-primary hover:underline"
@@ -184,19 +195,19 @@ export function ContactModal({ trigger, open, setOpen }: ContactModalProps) {
               </div>
             </div>
 
-            <div className="text-center text-sm pt-4 border-t">
+            <div className="text-center text-sm pt-4 border-t whitespace-normal break-words">
               Danh sách các ngành đào tạo và Tư vấn chuyên ngành:{" "}
               <a
                 href="https://tuyensinh.hcmute.edu.vn/#/dh-chinh-quy/thong-tin-tuyen-sinh-dh-chinh-quy/CAC-NGANH-TUYEN-SINH-NAM-2024-1706762539801#top"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary font-medium hover:underline inline-flex items-center gap-1"
+                className="text-primary font-medium hover:underline"
               >
-                xem tại đây
+                Xem tại đây
               </a>
             </div>
           </motion.div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
