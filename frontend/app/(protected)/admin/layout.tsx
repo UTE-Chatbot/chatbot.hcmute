@@ -110,7 +110,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                       <p className="text-md font-bold leading-none">
                         {user.full_name}
                       </p>
-                      <p className="text-md leading-none text-muted-foreground">
+                      <p className="text-md leading-none truncate max-w-[200px] text-muted-foreground">
                         {user.email}
                       </p>
                     </div>
