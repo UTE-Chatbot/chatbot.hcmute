@@ -52,6 +52,12 @@ export const siteConfig = {
     "tư vấn tuyển sinh",
     "đại học",
     "tuyển sinh đại học",
+    "tuyển sinh HCMUTE",
+    "điểm chuẩn HCMUTE",
+    "ngành học HCMUTE",
+    "tuyển sinh 2025",
+    "xét tuyển đại học",
+    "Sư phạm Kỹ thuật TP.HCM",
   ],
   header: [
     {

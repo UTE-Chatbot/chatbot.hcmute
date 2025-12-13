@@ -8,6 +8,7 @@ import "./tiptap.css";
 import "katex/dist/katex.min.css";
 import VisitorProvider from "@/components/providers/visitor-provider";
 import AuthProvider from "@/components/providers/auth-provider";
+import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/seo/json-ld";
 
 export const metadata: Metadata = constructMetadata({});
 
@@ -30,6 +31,8 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
+        <OrganizationJsonLd />
+        <WebsiteJsonLd />
         <link
           rel="apple-touch-icon"
           sizes="180x180"

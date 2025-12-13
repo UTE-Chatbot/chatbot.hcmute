@@ -15,20 +15,36 @@ export function constructMetadata({
   title = siteConfig.name,
   description = siteConfig.description,
   image = siteConfig.ogImage,
+  noIndex = false,
   ...props
 }: {
   title?: string;
   description?: string;
   image?: string;
+  noIndex?: boolean;
   [key: string]: Metadata[keyof Metadata];
 }): Metadata {
   return {
     title: {
-      template: "%s | " + siteConfig.name,
+      template: "%s | " + siteConfig.shortName,
       default: siteConfig.name,
     },
     description: description || siteConfig.description,
     keywords: siteConfig.keywords,
+    robots: {
+      index: !noIndex,
+      follow: !noIndex,
+      googleBot: {
+        index: !noIndex,
+        follow: !noIndex,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+    alternates: {
+      canonical: siteConfig.url,
+    },
     openGraph: {
       title: title === siteConfig.name ? siteConfig.shortName : title,
       description:
@@ -56,16 +72,23 @@ export function constructMetadata({
           ? siteConfig.ogDescription
           : description,
       images: [image],
+      site: "@hcmute",
       creator: "@hcmute",
     },
-    icons: "/favicon/favicon.ico",
+    icons: {
+      icon: "/favicon/favicon.ico",
+      shortcut: "/favicon/favicon-16x16.png",
+      apple: "/favicon/apple-touch-icon.png",
+    },
     metadataBase: new URL(siteConfig.url),
     authors: [
       {
-        name: siteConfig.name,
+        name: "Trường Đại học Sư phạm Kỹ thuật TP. Hồ Chí Minh",
         url: siteConfig.url,
       },
     ],
+    creator: "HCMUTE",
+    publisher: "Trường Đại học Sư phạm Kỹ thuật TP. Hồ Chí Minh",
     ...props,
   };
 }
