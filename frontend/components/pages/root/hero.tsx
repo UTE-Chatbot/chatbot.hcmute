@@ -77,7 +77,7 @@ function HeroTitles() {
         ))}
       </motion.h1>
       <motion.p
-        className="mx-auto lg:mx-0 max-w-xl text-center lg:text-left text-lg leading-7 text-muted-foreground sm:text-xl sm:leading-9 text-balance"
+        className="mx-auto lg:mx-0 max-w-xl text-center lg:text-left text-[0.85rem] sm:text-xl leading-7 text-muted-foreground sm:leading-9 whitespace-nowrap"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{
@@ -86,7 +86,7 @@ function HeroTitles() {
           ease,
         }}
       >
-        Trường Đại học Sư Phạm Kỹ Thuật, TP. Hồ Chí Minh
+        Trường Đại học Sư Phạm Kỹ Thuật TP. Hồ Chí Minh
       </motion.p>
     </div>
   );
@@ -114,7 +114,7 @@ function HeroCTA() {
         </Link>
       </motion.div>
       <motion.p
-        className="mt-5 text-sm text-muted-foreground text-center lg:text-left"
+        className="mt-5 text-[0.8rem] text-muted-foreground text-center lg:text-left"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.0, duration: 0.8 }}

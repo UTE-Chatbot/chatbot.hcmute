@@ -34,8 +34,10 @@ export function Footer() {
                 </a>
               ))}
             </div>
-            <span className="text-sm text-muted-foreground sm:text-center">
-              Bản quyền thuộc về{" "}
+            <span className="text-sm text-muted-foreground text-center">
+              Bản quyền thuộc về
+              <br className="block md:hidden" />
+              <div> </div>
               <a href="/" className="font-medium hover:underline">
                 Phòng TS & CTSV HCMUTE
               </a>{" "}
