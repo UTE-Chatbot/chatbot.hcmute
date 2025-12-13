@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, status, Query, Header
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.messages import apologize
 from typing import Optional, List, Any
@@ -7,10 +7,12 @@ from uuid import UUID
 import uuid
 import json
 import asyncio
+from datetime import datetime
 from pydantic import BaseModel, model_validator
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.services import thread_service
@@ -32,6 +34,21 @@ from uuid import UUID
 router = APIRouter(prefix="/threads", tags=["Threads"])
 chat_router = APIRouter(tags=["Chat"])
 
+class MaintenanceUpdate(BaseModel):
+    enabled: bool
+
+@router.get("/maintenance")
+async def get_maintenance_mode():
+    return {"enabled": settings.maintenance_mode}
+
+@router.post("/maintenance")
+async def set_maintenance_mode(
+    body: MaintenanceUpdate,
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
+):
+    settings.maintenance_mode = body.enabled
+    return {"enabled": settings.maintenance_mode}
+
 
 def get_client_id(
      request: Request, current_user: Optional[User] = None,   body: Optional[ThreadCreate] = None,) -> str:
@@ -51,14 +68,23 @@ def get_client_id(
 @router.get("", response_model=Page[ThreadResponse])
 async def list_threads(
     client_id: Optional[str] = Query(None, description="Filter by client_id"),
+    search: Optional[str] = Query(None, description="Search by title"),
     params: Params = Depends(),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(RoleEnum.ADMIN)),
 ):
-    query = select(Thread)
+    query = select(Thread).options(selectinload(Thread.user))
     
+    # Filter to only show threads that have messages
+    query = query.where(
+        text(f"EXISTS (SELECT 1 FROM {settings.chat_history_table_name} WHERE session_id = threads.thread_id)")
+    )
+
     if client_id:
         query = query.where(Thread.client_id == client_id)
+        
+    if search:
+        query = query.where(Thread.title.ilike(f"%{search}%"))
     
     query = query.order_by(Thread.created_at.desc())
     
@@ -148,11 +174,34 @@ async def get_global_thread_report(
 
 @router.get("/admin/dashboard", response_model=DashboardStatsResponse)
 async def get_dashboard_stats(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
     current_user: User = Depends(require_roles(RoleEnum.ADMIN)),
     db: AsyncSession = Depends(get_db)
 ):
-    stats = await thread_service.get_dashboard_stats(db)
+    stats = await thread_service.get_dashboard_stats(db, start_date, end_date)
     return stats
+
+
+@router.get("/admin/export-csv")
+async def export_thread_csv(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    csv_content = await thread_service.generate_csv_export(db, start_date, end_date)
+    
+    filename = f"thread_report_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
+    
+    # Add BOM for Excel to recognize UTF-8
+    content_with_bom = "\ufeff" + csv_content
+
+    return Response(
+        content=content_with_bom,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 

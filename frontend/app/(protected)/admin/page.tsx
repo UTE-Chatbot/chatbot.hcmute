@@ -14,20 +14,33 @@ import {
   MessageSquare,
   Users,
   FileText,
-  Loader2,
+  Download,
 } from "lucide-react";
-import { getDashboardStats } from "@/services/thread.service";
+import Loader from "@/components/ui/loader";
+import { getDashboardStats, exportThreadCsv } from "@/services/thread.service";
 import { DashboardStatsResponse } from "@/types/thread";
 import { DashboardCharts } from "@/components/pages/admin/dashboard/dashboard-charts";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { addDays } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 const DashboardPage = () => {
   const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -30),
+    to: new Date(),
+  });
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(
+    dateRange
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getDashboardStats();
+        setLoading(true);
+        const data = await getDashboardStats(dateRange?.from, dateRange?.to);
         setStats(data);
       } catch (error) {
         console.error("Failed to fetch dashboard stats", error);
@@ -36,7 +49,19 @@ const DashboardPage = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [dateRange]);
+
+  const handleApplyFilter = () => {
+    setDateRange(tempDateRange);
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      await exportThreadCsv(dateRange?.from, dateRange?.to);
+    } catch (error) {
+      console.error("Failed to export CSV", error);
+    }
+  };
 
   const statCards = [
     {
@@ -66,20 +91,26 @@ const DashboardPage = () => {
   ];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <Loader className="h-[50vh]" />;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Tổng quan</h1>
-        <p className="text-muted-foreground mt-2">
-          Xem thống kê và báo cáo về hệ thống chatbot
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Tổng quan</h1>
+          <p className="text-muted-foreground mt-2">
+            Xem thống kê và báo cáo về hệ thống chatbot
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <DateRangePicker date={tempDateRange} setDate={setTempDateRange} />
+          <Button onClick={handleApplyFilter}>Lọc</Button>
+          <Button variant="outline" onClick={handleExportCsv}>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

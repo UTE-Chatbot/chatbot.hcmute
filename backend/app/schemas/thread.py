@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional, List, Any
 from pydantic import BaseModel, model_validator
+from app.schemas.user import UserRead
 class ThreadCreate(BaseModel):
     title: Optional[str] = None
     client_id: Optional[str] = None
@@ -17,6 +18,7 @@ class ThreadResponse(BaseModel):
     client_id: Optional[str]
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    user: Optional[UserRead] = None
 
     class Config:
         from_attributes = True

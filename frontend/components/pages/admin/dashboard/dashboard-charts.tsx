@@ -114,6 +114,17 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
                 layout="vertical"
                 margin={{ left: 40 }}
               >
+                <defs>
+                  <filter id="shadow" height="200%">
+                    <feDropShadow
+                      dx="2"
+                      dy="2"
+                      stdDeviation="2"
+                      floodColor="#000000"
+                      floodOpacity="0.3"
+                    />
+                  </filter>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis
@@ -129,6 +140,7 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
                   radius={[0, 4, 4, 0]}
                   name="Số lần xuất hiện"
                   barSize={32}
+                  style={{ filter: "url(#shadow)" }}
                 />
               </BarChart>
             </ResponsiveContainer>

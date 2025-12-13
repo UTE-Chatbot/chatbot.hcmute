@@ -55,19 +55,26 @@ export default function ContactMap() {
                   icon: MapPin,
                   title: "Địa chỉ",
                   description:
-                    "1 Võ Văn Ngân, Phường Linh Chiểu, Thành phố Thủ Đức, Thành phố Hồ Chí Minh",
+                    "1 Võ Văn Ngân, Phường Thủ Đức, Thành phố Hồ Chí Minh",
                   type: "address",
                 },
                 {
                   icon: Phone,
                   title: "Số điện thoại",
-                  description: "+84 28 3722 1223",
+                  description:
+                    "(+84 - 028) 38968641 - (+84 -028) 38961333 - (+84 -028) 37221223",
+                  type: "phone",
+                },
+                {
+                  icon: Phone,
+                  title: "Hotline Tư vấn tuyển sinh",
+                  description: "(+84 - 028) 37222764",
                   type: "phone",
                 },
                 {
                   icon: Mail,
                   title: "Email",
-                  description: "ptchc@hcmute.edu.vn",
+                  description: "hcth@hcmute.edu.vn",
                   type: "email",
                 },
                 {

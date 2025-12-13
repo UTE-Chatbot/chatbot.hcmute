@@ -13,17 +13,43 @@ import type {
   ThreadReportResponse,
   DashboardStatsResponse,
   ChatRequest,
+  MaintenanceStatus,
 } from "@/types/thread";
 
 /**
  * Get dashboard stats (admin only)
  * @returns Promise<DashboardStatsResponse>
  */
-export const getDashboardStats = async (): Promise<DashboardStatsResponse> => {
-  const response = await api.get<DashboardStatsResponse>(
-    "/threads/admin/dashboard"
-  );
+export const getDashboardStats = async (
+  startDate?: Date,
+  endDate?: Date
+): Promise<DashboardStatsResponse> => {
+  const params: any = {};
+  if (startDate) params.start_date = startDate.toISOString();
+  if (endDate) params.end_date = endDate.toISOString();
+
+  const queryString = new URLSearchParams(params).toString();
+  const url = `/threads/admin/dashboard${queryString ? `?${queryString}` : ""}`;
+
+  const response = await api.get<DashboardStatsResponse>(url);
   return response.data;
+};
+
+export const exportThreadCsv = async (
+  startDate?: Date,
+  endDate?: Date
+): Promise<void> => {
+  const params: any = {};
+  if (startDate) params.start_date = startDate.toISOString();
+  if (endDate) params.end_date = endDate.toISOString();
+
+  const queryString = new URLSearchParams(params).toString();
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/threads/admin/export-csv${
+    queryString ? `?${queryString}` : ""
+  }`;
+
+  // Use simple window.open for download or fetch blob
+  window.open(url, "_blank");
 };
 
 /**
@@ -143,9 +169,7 @@ export const deleteThread = async (threadId: string): Promise<void> => {
  * console.log(`Keywords: ${report.keywords.join(", ")}`);
  */
 export const getThreadReport = async (): Promise<ThreadReportResponse> => {
-  const response = await api.get<ThreadReportResponse>(
-    "/api/v1/threads/admin/report"
-  );
+  const response = await api.get<ThreadReportResponse>("/threads/admin/report");
   return response.data;
 };
 
@@ -177,7 +201,7 @@ export const sendChatMessage = async (
   request: ChatRequest
 ): Promise<Response> => {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/threads/${threadId}/ask`,
+    `${process.env.NEXT_PUBLIC_API_URL}/threads/${threadId}/ask`,
     {
       method: "POST",
       headers: {
@@ -195,6 +219,20 @@ export const sendChatMessage = async (
   return response;
 };
 
+export const getMaintenanceStatus = async (): Promise<MaintenanceStatus> => {
+  const response = await api.get<MaintenanceStatus>("/threads/maintenance");
+  return response.data;
+};
+
+export const setMaintenanceStatus = async (
+  enabled: boolean
+): Promise<MaintenanceStatus> => {
+  const response = await api.post<MaintenanceStatus>("/threads/maintenance", {
+    enabled,
+  });
+  return response.data;
+};
+
 // Export all thread-related service functions
 export default {
   getThreads,
@@ -206,4 +244,7 @@ export default {
   getThreadReport,
   sendChatMessage,
   getDashboardStats,
+  exportThreadCsv,
+  getMaintenanceStatus,
+  setMaintenanceStatus,
 };

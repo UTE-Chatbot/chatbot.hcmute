@@ -5,6 +5,7 @@ import { getThreads, deleteThread } from "@/services/thread.service";
 import { ThreadListResponse, ThreadResponse } from "@/types/thread";
 import { ThreadDetail } from "./thread-detail";
 import { formatDate } from "@/lib/utils"; // Assuming utils has this or I'll use native Date
+import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
 import {
   Card,
@@ -51,8 +52,19 @@ export function ThreadList() {
 
   // Filters
   const [search, setSearch] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 12;
+  const pageSize = 12; // Adjusted to match grid
+
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setDebouncedSearchValue(value);
+    setPage(1);
+  }, 500);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    debouncedSetSearch(e.target.value);
+  };
 
   // Actions
   const [viewingThreadId, setViewingThreadId] = useState<string | null>(null);
@@ -68,7 +80,7 @@ export function ThreadList() {
       const response = await getThreads({
         page,
         size: pageSize,
-        // search: search || undefined, // Add this if backend supports it
+        search: debouncedSearchValue || undefined,
       });
       setData(response);
     } catch (err) {
@@ -77,7 +89,7 @@ export function ThreadList() {
     } finally {
       setIsLoading(false);
     }
-  }, [page]);
+  }, [page, debouncedSearchValue]);
 
   useEffect(() => {
     fetchData();
@@ -134,7 +146,7 @@ export function ThreadList() {
         {data.items.map((thread) => (
           <Card
             key={thread.id}
-            className="overflow-hidden hover:shadow-md transition-shadow group bg-white"
+            className="overflow-hidden hover:shadow-md transition-shadow group bg-white flex flex-col h-full"
           >
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start gap-2">
@@ -172,15 +184,33 @@ export function ThreadList() {
                     ? new Date(thread.created_at).toLocaleDateString("vi-VN")
                     : "N/A"}
                 </div>
-                {thread.user_id && (
+                {thread.user ? (
+                  <div className="flex items-center gap-2">
+                    {thread.user.avatar ? (
+                      <img
+                        src={thread.user.avatar}
+                        alt="Avatar"
+                        className="w-4 h-4 rounded-full"
+                      />
+                    ) : (
+                      <User className="w-4 h-4" />
+                    )}
+                    <span
+                      className="truncate max-w-[150px] font-medium"
+                      title={thread.user.full_name || thread.user.email}
+                    >
+                      {thread.user.full_name || thread.user.email}
+                    </span>
+                  </div>
+                ) : thread.user_id ? (
                   <div className="flex items-center gap-1">
                     <User className="w-3 h-3" />
                     User ID: {thread.user_id.substring(0, 8)}...
                   </div>
-                )}
+                ) : null}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="mt-auto">
               <div className="flex justify-end">
                 <Button
                   variant="outline"
@@ -206,7 +236,7 @@ export function ThreadList() {
           <InputGroup>
             <InputGroupInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={handleSearchChange}
               placeholder="Tìm kiếm hội thoại..."
             />
             <InputGroupAddon>
@@ -260,6 +290,9 @@ export function ThreadList() {
             <div className="flex-1 w-full h-full overflow-hidden flex flex-col">
               <ThreadDetail
                 threadId={viewingThreadId}
+                user={
+                  data?.items.find((t) => t.thread_id === viewingThreadId)?.user
+                }
                 onBack={() => setViewingThreadId(null)}
               />
             </div>

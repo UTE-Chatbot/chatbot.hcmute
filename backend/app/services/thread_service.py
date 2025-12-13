@@ -309,13 +309,28 @@ async def generate_thread_report(
     )
 
 
-async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
+async def get_dashboard_stats(
+    db: AsyncSession,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> DashboardStatsResponse:
     """
     Get statistics for the admin dashboard.
     """
-    # 1. Get counts
+    # 1. Get counts (Apply date filters if provided where relevant, e.g. for threads)
     # Count threads
-    total_threads = (await db.execute(select(func.count(Thread.thread_id)))).scalar() or 0
+    thread_query = select(func.count(Thread.thread_id))
+    if start_date:
+        # Ensure naive datetime for comparison if DB stores naive
+        if start_date.tzinfo:
+            start_date = start_date.replace(tzinfo=None)
+        thread_query = thread_query.where(Thread.created_at >= start_date)
+    if end_date:
+        if end_date.tzinfo:
+            end_date = end_date.replace(tzinfo=None)
+        thread_query = thread_query.where(Thread.created_at <= end_date)
+            
+    total_threads = (await db.execute(thread_query)).scalar() or 0
     
     # Count CSVs
     total_csvs = (await db.execute(select(func.count(CSVTable.id)))).scalar() or 0
@@ -326,8 +341,11 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
     # Count Users
     total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
 
-    # 2. Get Thread Counts by Date (Last 30 days)
-    limit_date = datetime.now() - timedelta(days=30)
+    # 2. Get Thread Counts by Date (Last 30 days OR selected range)
+    if start_date:
+        limit_date = start_date
+    else:
+        limit_date = datetime.now() - timedelta(days=30)
     
     # Use generic date casting if possible, or string slicing
     # Postgres 'date' function works. SQLite 'date' function also works but syntax varies.
@@ -343,6 +361,13 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
                 func.count(Thread.thread_id).label("count")
             )
             .where(Thread.created_at >= limit_date)
+        )
+        
+        if end_date:
+             stats_query = stats_query.where(Thread.created_at <= end_date)
+
+        stats_query = (
+            stats_query
             .group_by(func.date(Thread.created_at))
             .order_by("date")
         )
@@ -356,12 +381,17 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
         print(f"Error getting thread stats: {e}")
         # Fallback or empty
 
-    # 3. Get Popular Keywords/Topics from recent threads (Last 50)
-    recent_threads_result = await db.execute(
-        select(Thread)
-        .order_by(Thread.created_at.desc())
-        .limit(20) # Limit to 20 for performance
-    )
+    # 3. Get Popular Keywords/Topics from recent threads (Last 50 OR in range)
+    recent_threads_query = select(Thread).order_by(Thread.created_at.desc())
+    
+    if start_date:
+        recent_threads_query = recent_threads_query.where(Thread.created_at >= start_date)
+    if end_date:
+        recent_threads_query = recent_threads_query.where(Thread.created_at <= end_date)
+        
+    recent_threads_query = recent_threads_query.limit(20) # Limit to 20 for performance
+
+    recent_threads_result = await db.execute(recent_threads_query)
     recent_threads = recent_threads_result.scalars().all()
     
     all_user_text = []
@@ -406,6 +436,71 @@ async def update_thread_title(
     await db.commit()
     await db.refresh(thread)
     return thread
+
+
+async def generate_csv_export(
+    db: AsyncSession,
+    start_date: Optional[datetime],
+    end_date: Optional[datetime]
+) -> str:
+    """
+    Generate CSV content for threads and messages.
+    """
+    import csv
+    import io
+
+    query = select(Thread).options(selectinload(Thread.user)).order_by(Thread.created_at.desc())
+    
+    if start_date:
+        if start_date.tzinfo:
+            start_date = start_date.replace(tzinfo=None)
+        query = query.where(Thread.created_at >= start_date)
+    if end_date:
+        if end_date.tzinfo:
+            end_date = end_date.replace(tzinfo=None)
+        query = query.where(Thread.created_at <= end_date)
+
+    result = await db.execute(query)
+    threads = result.scalars().all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        "Thread ID", "Title", "Created At", "User Email", "User Name", "Message Role", "Message Content"
+    ])
+
+    for thread in threads:
+        messages = await get_thread_messages(thread.thread_id)
+        
+        user_email = thread.user.email if thread.user else "N/A"
+        user_name = thread.user.full_name if thread.user and thread.user.full_name else "N/A"
+        created_at = thread.created_at.strftime("%Y-%m-%d %H:%M:%S") if thread.created_at else ""
+
+        if not messages:
+             writer.writerow([
+                str(thread.thread_id),
+                thread.title or "Untitled",
+                created_at,
+                user_email,
+                user_name,
+                "N/A",
+                "No messages"
+            ])
+        else:
+            for msg in messages:
+                writer.writerow([
+                    str(thread.thread_id),
+                    thread.title or "Untitled",
+                    created_at,
+                    user_email,
+                    user_name,
+                    msg.role,
+                    msg.content
+                ])
+                
+    return output.getvalue()
 
 
 async def set_thread_title_from_first_question(

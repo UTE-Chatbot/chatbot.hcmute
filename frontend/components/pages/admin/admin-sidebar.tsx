@@ -12,7 +12,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
+import {
+  getMaintenanceStatus,
+  setMaintenanceStatus,
+} from "@/services/thread.service";
+import { toast } from "sonner";
 import {
   Database,
   FileText,
@@ -40,6 +49,30 @@ const menuItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getMaintenanceStatus()
+      .then((status) => setMaintenanceMode(status.enabled))
+      .catch((err) => console.error("Failed to fetch maintenance status", err));
+  }, []);
+
+  const handleMaintenanceToggle = async (enabled: boolean) => {
+    try {
+      setLoading(true);
+      const status = await setMaintenanceStatus(enabled);
+      setMaintenanceMode(status.enabled);
+      toast.success(`Chế độ bảo trì đã ${status.enabled ? "bật" : "tắt"}`);
+    } catch (err) {
+      console.error("Failed to update maintenance status", err);
+      toast.error("Không thể cập nhật chế độ bảo trì");
+      // Revert state if failed
+      setMaintenanceMode(!enabled);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Sidebar>
@@ -76,6 +109,23 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="flex items-center justify-between px-2 py-2">
+              <Label htmlFor="maintenance-mode" className="text-sm font-medium">
+                Bảo trì
+              </Label>
+              <Switch
+                id="maintenance-mode"
+                checked={maintenanceMode}
+                onCheckedChange={handleMaintenanceToggle}
+                disabled={loading}
+              />
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getThreadMessages } from "@/services/thread.service";
 import { MessageResponse as ThreadMessage } from "@/types/thread"; // Renamed to avoid collision
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, User } from "lucide-react";
 import {
   Conversation,
   ConversationContent,
@@ -18,6 +18,12 @@ import {
 
 interface ThreadDetailProps {
   threadId: string;
+  user?: {
+    id: string;
+    email: string;
+    full_name?: string | null;
+    avatar?: string | null;
+  } | null;
   onBack: () => void;
 }
 
@@ -83,7 +89,7 @@ const MediaContent = ({ children }: { children: string }) => {
   );
 };
 
-export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
+export function ThreadDetail({ threadId, user, onBack }: ThreadDetailProps) {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,11 +134,38 @@ export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <h2 className="text-lg font-semibold">Chi tiết hội thoại</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <h2 className="text-lg font-semibold">Chi tiết hội thoại</h2>
+        </div>
+        {user && (
+          <div className="flex items-center gap-2 mr-4">
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                className="w-8 h-8 rounded-full object-cover"
+                alt="Avatar"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                <User className="w-4 h-4" />
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">
+                {user.full_name || user.email}
+              </span>
+              {user.full_name && (
+                <span className="text-xs text-muted-foreground">
+                  {user.email}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 border-1 rounded-3xl mt-4 pt-4 flex flex-col relative">

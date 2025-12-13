@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Upload, Image as ImageIcon, Crop } from "lucide-react";
+import { Upload, Image as ImageIcon, Crop } from "lucide-react";
+import Loader from "@/components/ui/loader";
 import ReactCrop, { Crop as CropType, PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
@@ -38,7 +39,9 @@ export function ImageDialog({
   // Crop state
   const [cropImageSrc, setCropImageSrc] = React.useState<string | null>(null);
   const [crop, setCrop] = React.useState<CropType>();
-  const [completedCrop, setCompletedCrop] = React.useState<PixelCrop | null>(null);
+  const [completedCrop, setCompletedCrop] = React.useState<PixelCrop | null>(
+    null
+  );
   const imgRef = React.useRef<HTMLImageElement>(null);
   const [isCropping, setIsCropping] = React.useState(false);
 
@@ -67,11 +70,11 @@ export function ImageDialog({
         setSelectedFile(file);
         // Initialize crop to center 80%
         setCrop({
-          unit: '%',
+          unit: "%",
           x: 10,
           y: 10,
           width: 80,
-          height: 80
+          height: 80,
         });
       };
       reader.readAsDataURL(file);
@@ -194,12 +197,16 @@ export function ImageDialog({
   return (
     <>
       {/* Crop Dialog */}
-      <Dialog open={isCropping} onOpenChange={(open) => !open && handleCropCancel()}>
+      <Dialog
+        open={isCropping}
+        onOpenChange={(open) => !open && handleCropCancel()}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Cắt hình ảnh</DialogTitle>
             <DialogDescription>
-              Chọn vùng bạn muốn giữ lại. Kéo và thay đổi kích thước khung để cắt ảnh.
+              Chọn vùng bạn muốn giữ lại. Kéo và thay đổi kích thước khung để
+              cắt ảnh.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center p-4">
@@ -286,11 +293,11 @@ export function ImageDialog({
                             setCropImageSrc(reader.result as string);
                             setIsCropping(true);
                             setCrop({
-                              unit: '%',
+                              unit: "%",
                               x: 10,
                               y: 10,
                               width: 80,
-                              height: 80
+                              height: 80,
                             });
                           };
                           reader.readAsDataURL(selectedFile);
@@ -340,7 +347,10 @@ export function ImageDialog({
                   disabled={!selectedFile || uploading}
                 >
                   {uploading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader
+                      className="mr-2 h-auto w-auto inline-flex"
+                      spinnerClassName="h-4 w-4"
+                    />
                   )}
                   Chèn
                 </Button>
