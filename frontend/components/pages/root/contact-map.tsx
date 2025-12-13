@@ -20,10 +20,10 @@ export default function ContactMap() {
           </h2>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-8 items-start">
+        <div className="grid lg:grid-cols-2 gap-8">
           {/* Map Column */}
           <motion.div
-            className="w-full h-[450px] rounded-3xl overflow-hidden shadow-xl border border-gray-200"
+            className="w-full h-full min-h-[450px] rounded-3xl overflow-hidden shadow-xl border border-gray-200"
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
