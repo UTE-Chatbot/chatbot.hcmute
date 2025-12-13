@@ -36,8 +36,8 @@ export function Footer() {
             </div>
             <span className="text-sm text-muted-foreground text-center">
               Bản quyền thuộc về
-              <br className="block md:hidden" />
-              <div> </div>
+              <br className="block sm:!hidden" />
+              <span className="hidden sm:!inline"> </span>
               <a href="/" className="font-medium hover:underline">
                 Phòng TS & CTSV HCMUTE
               </a>{" "}

@@ -42,7 +42,8 @@ def serialize_chunk(chunk: DocumentChunk) -> dict:
 async def get_documents_paginated(
     query=QueryBuilder(Document),
     params: Params = Depends(),
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     result = await paginate(session, query, params)
     return result
@@ -69,7 +70,8 @@ async def create_document(
 async def get_document(
     document_id: int,
     request: Request,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     document = await document_service.get_document_by_id(session, document_id)
     if not document:
@@ -133,7 +135,8 @@ async def get_document_chunks(
     document_id: int,
     query=QueryBuilder(DocumentChunk),
     params: Params = Depends(),
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
 ):
     if not await document_service.get_document_by_id(session, document_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy tài liệu")

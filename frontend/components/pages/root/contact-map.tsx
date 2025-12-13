@@ -80,7 +80,7 @@ export default function ContactMap() {
                 {
                   icon: Globe,
                   title: "Website",
-                  description: "hcmute.edu.vn",
+                  description: "https://hcmute.edu.vn",
                   type: "url",
                 },
               ].map((item, index) => (

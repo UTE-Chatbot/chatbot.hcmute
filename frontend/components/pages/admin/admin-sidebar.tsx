@@ -81,7 +81,7 @@ export function AdminSidebar() {
           href="/"
           className="flex items-center gap-2 px-4 py-2 hover:opacity-80 transition-opacity"
         >
-          <img src="/logo/rectangle.png" alt="Logo" className="w-8 h-8" />
+          <img src="/logo/rectangle.png" alt="Logo" className="w-auto h-8" />
         </Link>
       </SidebarHeader>
       <SidebarContent>

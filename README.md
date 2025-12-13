@@ -76,6 +76,7 @@ nano .env.development
 ```
 
 Required environment variables:
+
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` - Database credentials
 - `POSTGRES_HOST`, `POSTGRES_PORT` - Database connection
 - `JWT_SECRET_KEY` - Secret key for JWT authentication
@@ -102,6 +103,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 API documentation available at:
+
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
@@ -131,6 +133,7 @@ nano .env.local
 ```
 
 Required environment variables:
+
 - `NEXT_PUBLIC_API_URL` - Backend API URL (e.g., http://localhost:8000)
 
 #### Start Development Server
@@ -159,6 +162,7 @@ npm run start
 ## Service Ports
 
 ### Development
+
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
 - PostgreSQL: localhost:5433
@@ -166,6 +170,7 @@ npm run start
 - MinIO: http://localhost:9000 (Console: http://localhost:9001)
 
 ### Production
+
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
 - PostgreSQL: localhost:5432 (internal)
@@ -235,6 +240,7 @@ hcmute-chatbot/
 ### Backend not connecting to database
 
 Check if PostgreSQL is running:
+
 ```bash
 docker compose -f docker-compose.dev.yml ps postgres
 ```
@@ -246,6 +252,7 @@ Verify environment variables in `.env.development`
 Ensure `NEXT_PUBLIC_API_URL` is correctly set in `.env.local`
 
 Check CORS settings in backend `.env.development`:
+
 ```
 ALLOW_ORIGINS=http://localhost:3000
 ```
@@ -253,6 +260,7 @@ ALLOW_ORIGINS=http://localhost:3000
 ### Permission denied errors
 
 Ensure proper file permissions:
+
 ```bash
 chmod +x backend/scripts/*
 ```
@@ -260,3 +268,13 @@ chmod +x backend/scripts/*
 ### Port already in use
 
 Change port mappings in `docker-compose.{dev|prod}.yml` or stop conflicting services
+
+### Database migrations
+
+```bash
+docker exec -ti backend_prod bin/bash
+```
+
+```
+alembic upgrade head
+```

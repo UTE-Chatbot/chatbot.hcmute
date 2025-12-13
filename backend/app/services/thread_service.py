@@ -21,16 +21,26 @@ from app.schemas.thread import (
 )
 from app.core.config import settings
 
-# Initialize chat history
 _chat_history_instance = None
 
 
 def _get_chat_history() -> ChatHistory:
-    """Lazy load chat history instance"""
     global _chat_history_instance
     if _chat_history_instance is None:
         _chat_history_instance = ChatHistory()
     return _chat_history_instance
+
+
+async def _chat_history_table_exists(db: AsyncSession) -> bool:
+    result = await db.execute(
+        text(f"""
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.tables 
+                WHERE table_name = '{settings.chat_history_table_name}'
+            )
+        """)
+    )
+    return result.scalar() or False
 
 
 async def create_thread(
@@ -314,14 +324,10 @@ async def get_dashboard_stats(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
 ) -> DashboardStatsResponse:
-    """
-    Get statistics for the admin dashboard.
-    """
-    # 1. Get counts (Apply date filters if provided where relevant, e.g. for threads)
-    # Count threads
+    chat_table_exists = await _chat_history_table_exists(db)
+    
     thread_query = select(func.count(Thread.thread_id))
     if start_date:
-        # Ensure naive datetime for comparison if DB stores naive
         if start_date.tzinfo:
             start_date = start_date.replace(tzinfo=None)
         thread_query = thread_query.where(Thread.created_at >= start_date)
@@ -330,41 +336,30 @@ async def get_dashboard_stats(
             end_date = end_date.replace(tzinfo=None)
         thread_query = thread_query.where(Thread.created_at <= end_date)
             
-    # Filter empty threads
-    chat_history = table(settings.chat_history_table_name, column("session_id"))
-    thread_query = thread_query.where(
-        exists(
-            select(1).select_from(chat_history).where(
-                chat_history.c.session_id == Thread.thread_id
-            )
-        )
-    )
+    # if chat_table_exists:
+    #     chat_history = table(settings.chat_history_table_name, column("session_id"))
+    #     thread_query = thread_query.where(
+    #         exists(
+    #             select(1).select_from(chat_history).where(
+    #                 chat_history.c.session_id == Thread.thread_id
+    #             )
+    #         )
+    #     )
 
     total_threads = (await db.execute(thread_query)).scalar() or 0
     
-    # Count CSVs
     total_csvs = (await db.execute(select(func.count(CSVTable.id)))).scalar() or 0
-    
-    # Count Docs
     total_docs = (await db.execute(select(func.count(Document.id)))).scalar() or 0
-    
-    # Count Users
     total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
 
-    # 2. Get Thread Counts by Date (Last 30 days OR selected range)
     if start_date:
         limit_date = start_date
     else:
         limit_date = datetime.now() - timedelta(days=30)
     
-    # Use generic date casting if possible, or string slicing
-    # Postgres 'date' function works. SQLite 'date' function also works but syntax varies.
-    # Assuming Postgres (from CSVTable JSONB usage).
-    
     date_counts = []
     
     try:
-        # Group by date of creation
         stats_query = (
             select(
                 func.date(Thread.created_at).label("date"), 
@@ -382,15 +377,15 @@ async def get_dashboard_stats(
             .order_by("date")
         )
 
-        # Filter empty threads
-        chat_history = table(settings.chat_history_table_name, column("session_id"))
-        stats_query = stats_query.where(
-            exists(
-                select(1).select_from(chat_history).where(
-                    chat_history.c.session_id == Thread.thread_id
-                )
-            )
-        )
+        # if chat_table_exists:
+        #     chat_history = table(settings.chat_history_table_name, column("session_id"))
+        #     stats_query = stats_query.where(
+        #         exists(
+        #             select(1).select_from(chat_history).where(
+        #                 chat_history.c.session_id == Thread.thread_id
+        #             )
+        #         )
+        #     )
 
         result = await db.execute(stats_query)
         rows = result.all()
@@ -400,9 +395,7 @@ async def get_dashboard_stats(
             
     except Exception as e:
         print(f"Error getting thread stats: {e}")
-        # Fallback or empty
 
-    # 3. Get Popular Keywords/Topics from recent threads (Last 50 OR in range)
     recent_threads_query = select(Thread).order_by(Thread.created_at.desc())
     
     if start_date:
@@ -410,7 +403,7 @@ async def get_dashboard_stats(
     if end_date:
         recent_threads_query = recent_threads_query.where(Thread.created_at <= end_date)
         
-    recent_threads_query = recent_threads_query.limit(20) # Limit to 20 for performance
+    recent_threads_query = recent_threads_query.limit(20)
 
     recent_threads_result = await db.execute(recent_threads_query)
     recent_threads = recent_threads_result.scalars().all()
@@ -418,8 +411,6 @@ async def get_dashboard_stats(
     all_user_text = []
     for thread in recent_threads:
         try:
-            # We reuse get_thread_messages. 
-            # Note: valid messages are stored in LangChain history table usually.
             messages = await get_thread_messages(thread.thread_id)
             for msg in messages:
                 if msg.role == "human":
@@ -464,12 +455,10 @@ async def generate_csv_export(
     start_date: Optional[datetime],
     end_date: Optional[datetime]
 ) -> str:
-    """
-    Generate CSV content for threads and messages.
-    """
     import csv
     import io
 
+    chat_table_exists = await _chat_history_table_exists(db)
     query = select(Thread).options(selectinload(Thread.user)).order_by(Thread.created_at.desc())
     
     if start_date:
@@ -481,15 +470,15 @@ async def generate_csv_export(
             end_date = end_date.replace(tzinfo=None)
         query = query.where(Thread.created_at <= end_date)
 
-    # Filter empty threads
-    chat_history = table(settings.chat_history_table_name, column("session_id"))
-    query = query.where(
-        exists(
-            select(1).select_from(chat_history).where(
-                chat_history.c.session_id == Thread.thread_id
-            )
-        )
-    )
+    # if chat_table_exists:
+    #     chat_history = table(settings.chat_history_table_name, column("session_id"))
+    #     query = query.where(
+    #         exists(
+    #             select(1).select_from(chat_history).where(
+    #                 chat_history.c.session_id == Thread.thread_id
+    #             )
+    #         )
+    #     )
 
     result = await db.execute(query)
     threads = result.scalars().all()

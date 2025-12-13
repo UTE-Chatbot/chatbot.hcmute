@@ -69,22 +69,42 @@ def get_client_id(
 async def list_threads(
     client_id: Optional[str] = Query(None, description="Filter by client_id"),
     search: Optional[str] = Query(None, description="Search by title"),
+    start_date: Optional[datetime] = Query(None, description="Filter by start date"),
+    end_date: Optional[datetime] = Query(None, description="Filter by end date"),
     params: Params = Depends(),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(RoleEnum.ADMIN)),
 ):
     query = select(Thread).options(selectinload(Thread.user))
     
-    # Filter to only show threads that have messages
-    query = query.where(
-        text(f"EXISTS (SELECT 1 FROM {settings.chat_history_table_name} WHERE session_id = threads.thread_id)")
-    )
+    # table_exists_result = await db.execute(
+    #     text(f"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{settings.chat_history_table_name}')")
+    # )
+    # table_exists = table_exists_result.scalar() or False
+    
+    # if table_exists:
+    #     query = query.where(
+    #         text(f"EXISTS (SELECT 1 FROM {settings.chat_history_table_name} WHERE session_id = threads.thread_id)")
+    #     )
 
     if client_id:
         query = query.where(Thread.client_id == client_id)
         
     if search:
         query = query.where(Thread.title.ilike(f"%{search}%"))
+
+    if start_date:
+        if start_date.tzinfo:
+            start_date = start_date.replace(tzinfo=None)
+        query = query.where(Thread.created_at >= start_date)
+
+    if end_date:
+        if end_date.tzinfo:
+            end_date = end_date.replace(tzinfo=None)
+        # Adjust end_date to include the entire day if it's set to midnight
+        # But for consistency with dashboard, we'll keep it simple first
+        # Ideally we should add 1 day or set time to 23:59:59 if it is midnight
+        query = query.where(Thread.created_at <= end_date)
     
     query = query.order_by(Thread.created_at.desc())
     
