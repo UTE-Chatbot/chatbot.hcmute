@@ -34,6 +34,7 @@ import ChatPromptInput from "@/components/pages/chat/prompt-input";
 import { type PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { UIMessage } from "ai";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { type SuggestionItem } from "@/components/pages/chat/chat-types";
 
 const getYoutubeId = (url: string) => {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -113,7 +114,7 @@ const AutoScrollHandler = ({ messages }: { messages: UIMessage[] }) => {
 
 interface ChatMessageListProps {
   messages: UIMessage[];
-  suggestions: string[];
+  suggestions: SuggestionItem[];
   handleNewChat: () => void;
   handleSuggestionClick: (suggestion: string) => void;
   text: string;
@@ -207,10 +208,16 @@ const ChatMessageList = ({
           </Suggestion>
           {suggestions.map((suggestion) => (
             <Suggestion
-              key={suggestion}
-              onClick={() => handleSuggestionClick(suggestion)}
-              suggestion={suggestion}
-            />
+              key={suggestion.key}
+              onClick={() => handleSuggestionClick(suggestion.description)}
+              suggestion={suggestion.description}
+              className="h-auto py-2"
+            >
+              <div className="flex items-center gap-2">
+                {suggestion.icon}
+                <span>{suggestion.description}</span>
+              </div>
+            </Suggestion>
           ))}
         </Suggestions>
         <div className="w-full px-4 pb-4">

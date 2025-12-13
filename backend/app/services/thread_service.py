@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
+from sqlalchemy import select, and_, or_, func, text, exists, table, column, cast, String
 from sqlalchemy.orm import selectinload
 from collections import Counter
 import re
@@ -330,6 +330,16 @@ async def get_dashboard_stats(
             end_date = end_date.replace(tzinfo=None)
         thread_query = thread_query.where(Thread.created_at <= end_date)
             
+    # Filter empty threads
+    chat_history = table(settings.chat_history_table_name, column("session_id"))
+    thread_query = thread_query.where(
+        exists(
+            select(1).select_from(chat_history).where(
+                chat_history.c.session_id == Thread.thread_id
+            )
+        )
+    )
+
     total_threads = (await db.execute(thread_query)).scalar() or 0
     
     # Count CSVs
@@ -371,6 +381,17 @@ async def get_dashboard_stats(
             .group_by(func.date(Thread.created_at))
             .order_by("date")
         )
+
+        # Filter empty threads
+        chat_history = table(settings.chat_history_table_name, column("session_id"))
+        stats_query = stats_query.where(
+            exists(
+                select(1).select_from(chat_history).where(
+                    chat_history.c.session_id == Thread.thread_id
+                )
+            )
+        )
+
         result = await db.execute(stats_query)
         rows = result.all()
         
@@ -459,6 +480,16 @@ async def generate_csv_export(
         if end_date.tzinfo:
             end_date = end_date.replace(tzinfo=None)
         query = query.where(Thread.created_at <= end_date)
+
+    # Filter empty threads
+    chat_history = table(settings.chat_history_table_name, column("session_id"))
+    query = query.where(
+        exists(
+            select(1).select_from(chat_history).where(
+                chat_history.c.session_id == Thread.thread_id
+            )
+        )
+    )
 
     result = await db.execute(query)
     threads = result.scalars().all()

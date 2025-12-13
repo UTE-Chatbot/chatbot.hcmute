@@ -1,4 +1,4 @@
-version: "3.3"
+version: "3.7"
 services:
   postgres:
     container_name: postgres
@@ -8,12 +8,15 @@ services:
       - ./backend/.env.production
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: chatbot_ute
+      POSTGRES_PASSWORD: Tuyensinh@spkt
+      POSTGRES_DB: postgres
     expose:
-      - "5432:5432"
+      - "5432"
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_prod:/var/lib/postgresql/data
     networks:
       - prod_network
     healthcheck:
@@ -43,14 +46,10 @@ services:
     networks:
       - prod_network
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
+      - postgres
+      - redis
+      - minio
+      - qdrant
 
   frontend:
     container_name: frontend_prod
@@ -80,7 +79,7 @@ services:
     env_file:
       - ./backend/.env.production
     volumes:
-      - minio_data:/data
+      - minio_data_prod:/data
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -100,7 +99,7 @@ services:
     ports:
       - "6333:6333"
     volumes:
-      - qdrant_data:/qdrant/storage
+      - qdrant_data_prod:/qdrant/storage
     networks:
       - prod_network
     healthcheck:
@@ -118,7 +117,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redis_data_prod:/data
     networks:
       - prod_network
     command: redis-server --appendonly yes
@@ -129,10 +128,10 @@ services:
       retries: 3
 
 volumes:
-  pgdata:
-  minio_data:
-  qdrant_data:
-  redis_data:
+  pgdata_prod:
+  minio_data_prod:
+  qdrant_data_prod:
+  redis_data_prod:
 
 networks:
   prod_network:

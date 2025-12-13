@@ -13,11 +13,32 @@ import Visitor from "@/lib/visitor";
 import { nanoid } from "nanoid";
 import { createNewThread } from "@/services/thread.service";
 
-const suggestions = [
-  "What are the latest trends in AI?",
-  "How does machine learning work?",
-  "Explain quantum computing",
-  "Best practices for React development",
+import {
+  Lightbulb,
+  Info,
+  AlertTriangle,
+  CheckCircle,
+  BookIcon,
+  UniversityIcon,
+} from "lucide-react";
+import { type SuggestionItem } from "@/components/pages/chat/chat-types";
+
+const suggestions: SuggestionItem[] = [
+  {
+    key: "1",
+    icon: <Lightbulb className="w-5 h-5" style={{ color: "#FFD700" }} />,
+    description: "Tôi muốn biết về học bổng của trường",
+  },
+  {
+    key: "2",
+    icon: <BookIcon className="w-5 h-5" style={{ color: "#1890FF" }} />,
+    description: "Có nên học ở HCMUTE không?",
+  },
+  {
+    key: "3",
+    icon: <UniversityIcon className="w-5 h-5" style={{ color: "#ff7118ff" }} />,
+    description: "Điểm chuẩn các ngành năm trước là bao nhiêu?",
+  },
 ];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;

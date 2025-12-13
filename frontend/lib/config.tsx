@@ -56,15 +56,15 @@ export const siteConfig = {
       content: {
         items: [
           {
-            href: "#",
+            href: "/lien-ket",
             title: "Danh sách trường",
             description: "Trường Trung học phổ thông liên kết tuyển sinh",
           },
-          {
-            href: "#",
-            title: "Điểm chuẩn các năm",
-            description: "Tổng hợp điểm chuẩn hàng năm",
-          },
+          // {
+          //   href: "/diem-chuan",
+          //   title: "Điểm chuẩn các năm",
+          //   description: "Tổng hợp điểm chuẩn hàng năm",
+          // },
         ],
       },
     },

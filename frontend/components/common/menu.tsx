@@ -17,8 +17,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { ArrowRightIcon, ContactIcon } from "lucide-react";
 import { ContactModal } from "./contact-modal";
-
+import { useRouter } from "next/navigation";
 export default function NavigationMenuDemo() {
+  const router = useRouter();
+  const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
   return (
     <NavigationMenu>
       <NavigationMenuList>
@@ -65,7 +67,9 @@ export default function NavigationMenuDemo() {
                     {item.content.items.map((subItem, subIndex) => (
                       <ListItem
                         key={subIndex}
-                        href={subItem.href}
+                        onClick={(item) => {
+                          router.push(subItem.href);
+                        }}
                         title={subItem.title}
                         className="hover:bg-primary/10"
                       >
@@ -77,6 +81,8 @@ export default function NavigationMenuDemo() {
               </>
             ) : item.label === "Liên hệ" ? (
               <ContactModal
+                open={isContactModalOpen}
+                setOpen={(value) => setIsContactModalOpen(value)}
                 trigger={
                   <Button
                     variant="outline"

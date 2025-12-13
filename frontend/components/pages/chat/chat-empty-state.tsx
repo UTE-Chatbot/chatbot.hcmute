@@ -5,9 +5,11 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import ChatPromptInput from "@/components/pages/chat/prompt-input";
 import { type PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
+import { type SuggestionItem } from "@/components/pages/chat/chat-types";
+
 interface ChatEmptyStateProps {
   userFullName?: string;
-  suggestions: string[];
+  suggestions: SuggestionItem[];
   handleSuggestionClick: (suggestion: string) => void;
   text: string;
   setText: (text: string) => void;
@@ -40,6 +42,7 @@ const ChatEmptyState = ({
           {getGreeting(userFullName).map((text: any, index: number) => (
             <motion.span
               key={index}
+              suppressHydrationWarning
               className="inline-block text-balance font-semibold mr-1"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -66,10 +69,16 @@ const ChatEmptyState = ({
           <Suggestions>
             {suggestions.map((suggestion) => (
               <Suggestion
-                key={suggestion}
-                onClick={() => handleSuggestionClick(suggestion)}
-                suggestion={suggestion}
-              />
+                key={suggestion.key}
+                onClick={() => handleSuggestionClick(suggestion.description)}
+                suggestion={suggestion.description}
+                className="h-auto py-2"
+              >
+                <div className="flex items-center gap-2">
+                  {suggestion.icon}
+                  <span>{suggestion.description}</span>
+                </div>
+              </Suggestion>
             ))}
           </Suggestions>
         </motion.div>

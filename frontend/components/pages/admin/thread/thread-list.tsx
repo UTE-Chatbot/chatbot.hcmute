@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getThreads, deleteThread } from "@/services/thread.service";
+import {
+  getThreads,
+  deleteThread,
+  exportThreadCsv,
+} from "@/services/thread.service";
 import { ThreadListResponse, ThreadResponse } from "@/types/thread";
 import { ThreadDetail } from "./thread-detail";
 import { formatDate } from "@/lib/utils"; // Assuming utils has this or I'll use native Date
@@ -31,7 +35,11 @@ import {
   Calendar,
   User,
   MoreVertical,
+  Download,
 } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { addDays } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +62,17 @@ export function ThreadList() {
   const [search, setSearch] = useState("");
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
   const [page, setPage] = useState(1);
+
   const pageSize = 12; // Adjusted to match grid
+
+  // Date Filters
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -30),
+    to: new Date(),
+  });
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(
+    dateRange
+  );
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setDebouncedSearchValue(value);
@@ -64,6 +82,11 @@ export function ThreadList() {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
     debouncedSetSearch(e.target.value);
+  };
+
+  const handleApplyFilter = () => {
+    setDateRange(tempDateRange);
+    setPage(1); // Reset to first page when filtering
   };
 
   // Actions
@@ -81,6 +104,8 @@ export function ThreadList() {
         page,
         size: pageSize,
         search: debouncedSearchValue || undefined,
+        start_date: dateRange?.from?.toISOString(),
+        end_date: dateRange?.to?.toISOString(),
       });
       setData(response);
     } catch (err) {
@@ -89,7 +114,7 @@ export function ThreadList() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, debouncedSearchValue]);
+  }, [page, debouncedSearchValue, dateRange]);
 
   useEffect(() => {
     fetchData();
@@ -110,6 +135,15 @@ export function ThreadList() {
       console.error("Error deleting thread:", err);
       // Ideally show a toast here instead of alert, but keeping simpler for now or use sonner if available
       alert("Không thể xóa hội thoại");
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportThreadCsv(dateRange?.from, dateRange?.to);
+    } catch (err) {
+      console.error("Failed to export threads:", err);
+      alert("Không thể xuất dữ liệu");
     }
   };
 
@@ -244,13 +278,26 @@ export function ThreadList() {
             </InputGroupAddon>
           </InputGroup>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto justify-end">
+          <DateRangePicker date={tempDateRange} setDate={setTempDateRange} />
+          <Button onClick={handleApplyFilter}>Lọc</Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 w-4 h-4" />
+            Export CSV
+          </Button>
           <Button variant="outline" onClick={fetchData}>
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="mr-2 w-4 h-4" />
             Làm mới
           </Button>
         </div>
       </div>
+
+      {/* Stats Summary */}
+      {data && (
+        <div className="text-sm text-muted-foreground">
+          Hiển thị {data.items.length} trên tổng số {data.total} hội thoại
+        </div>
+      )}
 
       {renderContent()}
 

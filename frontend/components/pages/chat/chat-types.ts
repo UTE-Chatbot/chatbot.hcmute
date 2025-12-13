@@ -1,3 +1,4 @@
+import React from "react";
 import type { ToolUIPart } from "ai";
 
 export type MessageType = {
@@ -20,4 +21,10 @@ export type MessageType = {
     result: string | undefined;
     error: string | undefined;
   }[];
+};
+
+export type SuggestionItem = {
+  key: string;
+  icon?: React.ReactNode;
+  description: string;
 };

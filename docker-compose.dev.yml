@@ -1,6 +1,6 @@
 version: "3.3"
 services:
-  postgres:
+  postgres_dev:
     container_name: postgres_dev
     image: postgres:15
     restart: always
@@ -13,7 +13,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_dev:/var/lib/postgresql/data
     networks:
       - dev_network
     healthcheck:
@@ -22,7 +22,7 @@ services:
       timeout: 5s
       retries: 5
 
-  minio:
+  minio_dev:
     container_name: minio_dev
     image: minio/minio:latest
     restart: always
@@ -32,7 +32,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin123}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin123}
     volumes:
-      - minio_data:/data
+      - minio_data_dev:/data
     ports:
       - "9002:9000"
       - "9003:9001"
@@ -45,7 +45,7 @@ services:
       timeout: 20s
       retries: 3
 
-  qdrant:
+  qdrant_dev:
     image: qdrant/qdrant:latest
     container_name: qdrant_dev
     restart: always
@@ -53,7 +53,7 @@ services:
       - "6335:6333"
       - "6336:6334"
     volumes:
-      - qdrant_data:/qdrant/storage
+      - qdrant_data_dev:/qdrant/storage
     networks:
       - dev_network
     healthcheck:
@@ -62,14 +62,14 @@ services:
       timeout: 10s
       retries: 3
 
-  redis:
+  redis_dev:
     image: redis:7-alpine
     container_name: redis_dev
     restart: always
     ports:
       - "6380:6379"
     volumes:
-      - redis_data:/data
+      - redis_data_dev:/data
     networks:
       - dev_network
     command: redis-server --appendonly yes
@@ -79,55 +79,55 @@ services:
       timeout: 5s
       retries: 3
 
-  backend:
-    container_name: backend_dev
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: always
-    env_file:
-      - ./backend/.env.development
-    environment:
-      - POSTGRES_SERVER=postgres_dev
-      - REDIS_HOST=redis_dev
-      - QDRANT_URL=http://qdrant_dev:6333
-      - MINIO_ENDPOINT=http://minio_dev:9000
-    ports:
-      - "8386:8386"
-    volumes:
-      - ./backend:/app
-    networks:
-      - dev_network
-    depends_on:
-      - postgres
-      - minio
-      - qdrant
-      - redis
-    command: uvicorn main:app --host 0.0.0.0 --port 8386 --reload
+  # backend:
+  #   container_name: backend_dev
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   env_file:
+  #     - ./backend/.env.development
+  #   environment:
+  #     - POSTGRES_SERVER=postgres_dev
+  #     - REDIS_HOST=redis_dev
+  #     - QDRANT_URL=http://qdrant_dev:6333
+  #     - MINIO_ENDPOINT=http://minio_dev:9000
+  #   ports:
+  #     - "8386:8386"
+  #   volumes:
+  #     - ./backend:/app
+  #   networks:
+  #     - dev_network
+  #   depends_on:
+  #     - postgres_dev
+  #     - minio_dev
+  #     - qdrant_dev
+  #     - redis_dev
+  #   command: uvicorn main:app --host 0.0.0.0 --port 8386 --reload
 
-  frontend:
-    container_name: frontend_dev
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: deps
-    restart: always
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8386/api/v1
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    networks:
-      - dev_network
-    command: pnpm dev
+  # frontend:
+  #   container_name: frontend_dev
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #     target: deps
+  #   restart: always
+  #   environment:
+  #     - NEXT_PUBLIC_API_URL=http://localhost:8386/api/v1
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - dev_network
+  #   command: pnpm dev
 
 volumes:
-  pgdata:
-  minio_data:
-  qdrant_data:
-  redis_data:
+  pgdata_dev:
+  minio_data_dev:
+  qdrant_data_dev:
+  redis_data_dev:
 
 networks:
   dev_network:

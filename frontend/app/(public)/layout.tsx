@@ -31,7 +31,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <Header />
       </div>
       <div
-        className="w-full"
+        className="w-full overflow-auto"
         style={{
           marginTop: `${headerHeight}px`,
           height: `calc(100vh - ${headerHeight}px)`,
