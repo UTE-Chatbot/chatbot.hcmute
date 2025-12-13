@@ -171,14 +171,14 @@ export default function Header() {
                           <p className="text-md font-bold leading-none">
                             {user.full_name}
                           </p>
-                          <p className="text-md leading-none text-muted-foreground">
+                          <p className="text-md leading-none truncate max-w-[200px] text-muted-foreground">
                             {user.email}
                           </p>
                         </div>
                       </DropdownMenuLabel>
                       <Button
                         variant="destructive"
-                        className="rounded-3xl w-full cursor-pointer"
+                        className="rounded-3xl w-full  cursor-pointer"
                         iconPlacement="right"
                         onClick={handleLogout}
                       >
