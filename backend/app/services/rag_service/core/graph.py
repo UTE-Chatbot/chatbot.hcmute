@@ -92,6 +92,15 @@ class RAG:
         information = state.get("information", [])
         context = "\n\n".join(information) if information else ""
         
+        running_summary = state.get("context", {}).get("running_summary")
+        context_summary = ""
+        if running_summary:
+            if hasattr(running_summary, "summary"):
+                context_summary = running_summary.summary
+            elif isinstance(running_summary, dict):
+                context_summary = running_summary.get("summary", "")
+        summary = context_summary if context_summary else state.get("summary", "")
+        
         system_message = SystemMessage(content=GENERATE_RESPONSE_PROMPT_ADMISSION_CHATBOT.format(
             context=context
         ))
