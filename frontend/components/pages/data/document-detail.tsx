@@ -198,6 +198,9 @@ export function DocumentDetail({ documentId, onBack }: DocumentDetailProps) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Danh sách Chunks</CardTitle>
+              <CardDescription>
+                Tổng số: {total} chunks
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -257,6 +260,35 @@ export function DocumentDetail({ documentId, onBack }: DocumentDetailProps) {
             </div>
           )}
         </CardContent>
+        
+        {/* Pagination */}
+        {total > pageSize && (
+          <div className="flex items-center justify-between px-6 py-4 border-t bg-white">
+            <div className="text-sm text-muted-foreground">
+              Trang {page} / {Math.ceil(total / pageSize)}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Trước
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page + 1)}
+                disabled={page >= Math.ceil(total / pageSize)}
+              >
+                Sau
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Dialog open={!!editingChunk} onOpenChange={() => handleCancelEdit()}>

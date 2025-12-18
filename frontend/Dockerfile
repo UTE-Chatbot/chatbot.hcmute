@@ -1,12 +1,12 @@
 # ─── Dependencies ─────────────────────────────────────────
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ─── Builder ─────────────────────────────────────────────
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -14,7 +14,7 @@ COPY . .
 RUN pnpm run build
 
 # ─── Runner (Production) ─────────────────────────────────
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 

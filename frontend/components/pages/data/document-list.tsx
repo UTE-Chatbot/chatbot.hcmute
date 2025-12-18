@@ -204,7 +204,7 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
   // Filters
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // Topic Filter
   const [topicsData, setTopicsData] = useState<TopicData>({});
@@ -774,6 +774,58 @@ export function DocumentList({ onUploadClick }: DocumentListProps) {
       </div>
 
       {renderListContent()}
+
+      {/* Pagination */}
+      {!chunkSearchMode && data && data.total > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg border shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Hiển thị:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="text-sm text-muted-foreground">mỗi trang</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              Trang {page} / {Math.ceil(data.total / pageSize)} (Tổng:{" "}
+              {data.total})
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Trước
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPage((p) =>
+                    Math.min(Math.ceil(data.total / pageSize), p + 1)
+                  )
+                }
+                disabled={page >= Math.ceil(data.total / pageSize)}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Detail / Chunks Modal - Fullscreen */}
       <Dialog

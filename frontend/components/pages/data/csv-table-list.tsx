@@ -59,7 +59,7 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
     null
   );
   const [deletingTableId, setDeletingTableId] = useState<number | null>(null);
-  const pageSize = 9;
+  const [pageSize, setPageSize] = useState(10);
 
   const loadTables = useCallback(async () => {
     try {
@@ -266,26 +266,48 @@ export function CSVTableList({ onAdd, onEdit }: CSVTableListProps) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            Trước
-          </Button>
-          <span className="text-sm">
-            Trang {page} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
-            Sau
-          </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg border shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Hiển thị:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="text-sm text-muted-foreground">mỗi trang</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              Trang {page} / {totalPages} (Tổng: {total})
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Trước
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
