@@ -133,7 +133,7 @@ export function AdminSidebar() {
 
               <SidebarMenuButton
                 onClick={() => setCacheDialogOpen(true)}
-                className="w-full justify-start px-2 mx-0 pl-0"
+                className="w-full justify-start !p-1 px-2 mx-0 pl-0"
               >
                 <Settings className="w-4 h-4" />
                 <span>Cấu hình Cache</span>
