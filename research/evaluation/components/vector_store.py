@@ -1,18 +1,23 @@
 import time
-from functools import lru_cache
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient, models
-from langchain_core.embeddings import Embeddings
-from langchain_qdrant.sparse_embeddings import SparseEmbeddings
-from app.core.config import settings
-from app.services.rag_service.component.embeddings import get_dense_embedding_model, get_sparse_embedding_model
+from components.embeddings import *
+from config import settings 
 
-def get_qdrant_store(
+client = QdrantClient(url=settings.qdrant_url)
+dense_embedding = get_dense_embedding_model()
+sparse_embedding = get_sparse_embedding_model()
+
+def delete_vector_store(collection_name: str):
+    if client.collection_exists(collection_name):
+        client.delete_collection(collection_name)
+        print(f"Collection '{collection_name}' deleted.")
+    else:
+        print(f"Collection '{collection_name}' does not exist.")
+
+def get_vector_store(
     mode: RetrievalMode, 
-    client: QdrantClient, 
     collection_name: str, 
-    dense_embedding: Embeddings = None, 
-    sparse_embedding: SparseEmbeddings = None,
     max_retries: int = 10,
     retry_delay: int = 3
 ) -> QdrantVectorStore:
@@ -77,14 +82,3 @@ def get_qdrant_store(
     
     return store
 
-qdrant_client = QdrantClient(url=settings.qdrant_url)
-dense_embedding_model = get_dense_embedding_model()
-sparse_embedding_model = get_sparse_embedding_model()
-
-vector_store = get_qdrant_store(
-    mode=RetrievalMode.HYBRID,
-    client=qdrant_client,
-    collection_name=settings.qdrant_collection_name,
-    dense_embedding=dense_embedding_model,
-    sparse_embedding=sparse_embedding_model
-)
