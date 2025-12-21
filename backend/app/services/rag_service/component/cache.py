@@ -5,6 +5,7 @@ from typing import Optional
 import redis.asyncio as redis
 from app.core.config import settings
 import inspect
+import traceback
 
 class SemanticCache:
     def __init__(self, embeddings, embeddings_size, threshold=None):
@@ -57,17 +58,21 @@ class SemanticCache:
                 cursor, keys = await client.scan(cursor, match=pattern, count=100)
                 
                 for key in keys:
-                    cache_data = await client.hgetall(key)
-                    if not cache_data or b'embedding' not in cache_data:
+                    try:
+                        cache_data = await client.hgetall(key)
+                        if not cache_data or b'embedding' not in cache_data:
+                            continue
+                        
+                        cached_embedding = np.frombuffer(cache_data[b'embedding'], dtype=np.float32)
+                        similarity = self._cosine_similarity(query_vec, cached_embedding)
+                        
+                        if similarity > best_score:
+                            best_score = similarity
+                            if b'response' in cache_data:
+                                best_response = cache_data[b'response'].decode('utf-8')
+                    except Exception as key_error:
+                        print(f"[WARN] Error processing cache key {key}: {key_error}")
                         continue
-                    
-                    cached_embedding = np.frombuffer(cache_data[b'embedding'], dtype=np.float32)
-                    similarity = self._cosine_similarity(query_vec, cached_embedding)
-                    
-                    if similarity > best_score:
-                        best_score = similarity
-                        if b'response' in cache_data:
-                            best_response = cache_data[b'response'].decode('utf-8')
                 
                 if cursor == 0:
                     break
@@ -80,7 +85,8 @@ class SemanticCache:
                 return None
                 
         except Exception as e:
-            print(f"Error during cache search: {e}")
+            print(f"[ERROR] Cache search failed: {e}")
+            traceback.print_exc()
             return None
 
     async def add_to_cache_async(self, question: str, response_text: str, question_embedding=None):
@@ -112,7 +118,8 @@ class SemanticCache:
             print(f"Added to cache successfully: {question[:50]}... (TTL: {self.ttl}s)")
             
         except Exception as e:
-            print(f"Error adding to cache: {e}")
+            print(f"[ERROR] Failed to add to cache: {e}")
+            traceback.print_exc()
 
     async def close(self):
         if self._redis_client is not None:

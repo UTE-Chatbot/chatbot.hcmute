@@ -200,10 +200,30 @@ class RAG:
             "information": [],
         }
 
-        async for msg, metadata in self.graph.astream(
-            inputs,
-            stream_mode="messages",
-            config=config,
-        ):
-            if msg.content and metadata["langgraph_node"] in ["generate_response"]:
-                yield msg.content
+        try:
+            cache_hit = False
+            final_state = None
+            async for event in self.graph.astream(
+                inputs,
+                stream_mode="values",
+                config=config,
+            ):
+                final_state = event
+                
+                if event.get("cache_hit") and event.get("response"):
+                    cache_hit = True
+                    yield {"content": event["response"], "cache_hit": cache_hit}
+                    return
+                
+                if "messages" in event and len(event["messages"]) > 0:
+                    last_msg = event["messages"][-1]
+                    if hasattr(last_msg, "content") and last_msg.content:
+                        if not isinstance(last_msg, HumanMessage):
+                            yield {"content": last_msg.content, "cache_hit": cache_hit}
+                            return
+                            
+        except Exception as e:
+            print(f"[ERROR] Workflow execution failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise

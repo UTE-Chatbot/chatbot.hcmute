@@ -114,7 +114,7 @@ async def check_rate_limit(
     limit_per_day: Optional[int] = None
 ) -> Tuple[bool, int]:
     """
-    Check if client has exceeded rate limit.
+    Check if client has exceeded rate limit without incrementing.
     Returns (allowed: bool, remaining_seconds: int)
     
     For admins: no rate limit
@@ -152,11 +152,46 @@ async def check_rate_limit(
         remaining_seconds = int((rate_limit.reset_at - now).total_seconds())
         return False, remaining_seconds
     
-    rate_limit.question_count += 1
-    await db.commit()
-    
     remaining = limit_per_day - rate_limit.question_count
     return True, remaining
+
+
+async def increment_rate_limit(
+    db: AsyncSession,
+    client_id: str,
+    is_admin: bool = False
+) -> None:
+    """
+    Increment the rate limit count for a client.
+    Should be called after a successful (non-cached) response.
+    """
+    if is_admin:
+        return
+    
+    now = datetime.now()
+    
+    result = await db.execute(
+        select(RateLimit).where(
+            and_(
+                RateLimit.client_id == client_id,
+                RateLimit.reset_at > now
+            )
+        )
+    )
+    rate_limit = result.scalar_one_or_none()
+    
+    if not rate_limit:
+        rate_limit = RateLimit(
+            client_id=client_id,
+            question_count=1,
+            reset_at=now + timedelta(days=1)
+        )
+        db.add(rate_limit)
+    else:
+        rate_limit.question_count += 1
+    
+    await db.commit()
+    print(f"Rate limit incremented for client {client_id}: {rate_limit.question_count}")
 
 
 async def get_thread_messages(thread_id: UUID) -> List[MessageResponse]:

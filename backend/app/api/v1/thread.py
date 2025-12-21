@@ -287,13 +287,32 @@ async def stream_response(
     rag = request.app.state.rag
     async def stream():
         answer_parts = []
+        cache_hit = False
         try:
-            async for chunk in rag.execute_workflow(user_question, str(thread_id)):
+            async for chunk_data in rag.execute_workflow(user_question, str(thread_id)):
                 if await request.is_disconnected():
                     break
-                answer_parts.append(chunk)
-                yield chunk
+                
+                if isinstance(chunk_data, dict):
+                    content = chunk_data.get("content", "")
+                    cache_hit = chunk_data.get("cache_hit", False)
+                else:
+                    content = chunk_data
+                
+                answer_parts.append(content)
+                yield content
+            
+            if not cache_hit:
+                background_tasks.add_task(
+                    thread_service.increment_rate_limit,
+                    db,
+                    client_id,
+                    is_admin
+                )
         except Exception as e:
+            print(f"[ERROR] Stream error: {e}")
+            import traceback
+            traceback.print_exc()
             yield apologize()
     
     response = StreamingResponse(stream(), media_type="text/plain")
