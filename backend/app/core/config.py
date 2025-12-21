@@ -65,6 +65,10 @@ class Settings:
     redis_password: str = os.getenv("REDIS_PASSWORD", "")
     redis_db: int = int(os.getenv("REDIS_DB", 0))
     
+    cache_ttl: int = int(os.getenv("CACHE_TTL", 3600))
+    cache_threshold: float = float(os.getenv("CACHE_THRESHOLD", 0.9))
+    cache_prefix: str = os.getenv("CACHE_PREFIX", "semantic_cache")
+    
     # LLM and Embedding Settings
     embedding_provider: str = os.getenv("EMBEDDING_PROVIDER", "OPENAI")
     embedding_model_name: str = os.getenv("EMBEDDING_MODEL_NAME", "text-embedding-3-small")

@@ -6,6 +6,8 @@ from langmem.short_term import SummarizationNode
 from app.services.csv_tables_service import get_cached_tables_schema_simple
 
 from app.services.rag_service.component.chat_history import ChatHistory
+from app.services.rag_service.component.cache import SemanticCache
+from app.services.rag_service.component.embeddings import get_dense_embedding_model
 from app.services.rag_service.component.prompt import (
     RETRIEVE_INFORMATION_WITH_TOOLS_PROMPT,
     GENERATE_RESPONSE_PROMPT_ADMISSION_CHATBOT,
@@ -26,6 +28,10 @@ class RAG:
         self.graph = None
         self.summarizer_llm = get_cost_effective_chat_model().bind(max_tokens=128)
         self.agent_executor = get_cost_effective_chat_model().bind_tools(tools).bind(max_tokens=1024, temperature=0)
+        
+        embeddings = get_dense_embedding_model()
+        embeddings_size = 1536
+        self.semantic_cache = SemanticCache(embeddings, embeddings_size)
 
         self.summarization_node = SummarizationNode(
             token_counter=count_tokens_approximately,
@@ -148,9 +154,20 @@ class RAG:
         self.graph = workflow.compile(checkpointer=checkpointer)
 
     async def check_cache(self, state: AgentState) -> AgentState:
-        return {**state, "cache_hit": False}
+        question = state.get("question", "")
+        if not question:
+            return {**state, "cache_hit": False}
+        
+        cached_response = await self.semantic_cache.search_cache_async(question)
+        
+        if cached_response:
+            return {**state, "cache_hit": True, "response": cached_response}
+        else:
+            return {**state, "cache_hit": False}
 
     def route_after_cache(self, state: AgentState) -> Literal["tool_executor", "update_chat_history"]:
+        if state.get("cache_hit", False):
+            return "update_chat_history"
         return "tool_executor"
 
     async def rewrite_question(self, state: AgentState) -> AgentState:
@@ -160,10 +177,15 @@ class RAG:
         question = state.get("question", "")
         response = state.get("response", "")
         thread_id = state.get("thread_id", "")
+        cache_hit = state.get("cache_hit", False)
         
         pg_history = self.chat_memory.get_session_history(thread_id)
         pg_history.add_user_message(question)
         pg_history.add_ai_message(response)
+        
+        if not cache_hit and question and response:
+            await self.semantic_cache.add_to_cache_async(question, response)
+        
         return state
 
     async def execute_workflow(self, question: str, thread_id: str):
