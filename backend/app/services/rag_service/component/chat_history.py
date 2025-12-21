@@ -38,22 +38,41 @@ class ChatHistory:
             return None
 
     def get_messages_from_session(self, session_id: str) -> List[BaseMessage]:
-        pg_history = self.get_session_history(session_id)
-
         chat_history = []
-        for message in pg_history.messages:
-            if message.type == "human":
-                chat_history.append(HumanMessage(content=message.content))
-            elif message.type == "ai":
-                chat_history.append(AIMessage(content=message.content))
+        with connect(self.conn_info) as sync_connection:
+            pg_history = PostgresChatMessageHistory(
+                self.table_name,
+                session_id,
+                sync_connection=sync_connection
+            )
+            for message in pg_history.messages:
+                if message.type == "human":
+                    chat_history.append(HumanMessage(content=message.content))
+                elif message.type == "ai":
+                    chat_history.append(AIMessage(content=message.content))
 
         return chat_history
 
     def get_chat_history(self, thread_id: str) -> List[MessageSchema]:
-        history_session = self.chat_memory.get_session_history(thread_id)
-        messages = history_session.get_messages()
+        # Use context manager here as well to avoid leaks if we just need to read
         list_messages: List[MessageSchema] = []
-        for message in messages:
-            role = "local" if message.type == "human" else "ai"
-            list_messages.append(MessageSchema(role=role, content=message.content))
+        
+        # Note: If get_session_history() without context manager is needed elsewhere (like in graph),
+        # we should keep get_session_history as is, but here we can optimize.
+        # But get_session_history creates a connection and returns the object.
+        # We can't close the connection easily if we use get_session_history.
+        # So we manually do it here similar to get_messages_from_session
+        
+        with connect(self.conn_info) as sync_connection:
+            history_session = PostgresChatMessageHistory(
+                self.table_name,
+                thread_id,
+                sync_connection=sync_connection
+            )
+            messages = history_session.messages # access property to fetch
+            
+            for message in messages:
+                role = "local" if message.type == "human" else "ai"
+                list_messages.append(MessageSchema(role=role, content=message.content))
+                
         return list_messages

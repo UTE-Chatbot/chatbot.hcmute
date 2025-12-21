@@ -91,10 +91,20 @@ class RAG:
 
         return {**state, "information": information}
 
-    async def generate_response(self, state: AgentState) -> AgentState:
-        if state.get("cache_hit", False):
-            return state
+    async def check_cache(self, state: AgentState) -> AgentState:
+        question = state.get("question", "")
+        cached_response = await self.semantic_cache.search_cache_async(question)
+        
+        if cached_response:
+            return {
+                "response": cached_response, 
+                "cache_hit": True, 
+                "messages": [SystemMessage(content=cached_response)] 
+            }
             
+        return {"cache_hit": False}
+
+    async def generate_response(self, state: AgentState) -> AgentState:
         information = state.get("information", [])
         context = "\n\n".join(information) if information else ""
         
@@ -125,16 +135,32 @@ class RAG:
 
         return {"response": response_message.content, "messages": [response_message]}
 
+    def route_cache(self, state: AgentState):
+        if state.get("cache_hit", False):
+            return "update_chat_history"
+        return "rewrite_question"
+
     async def init_workflow(self):
         workflow = StateGraph(AgentState)
 
+        workflow.add_node("check_cache", self.check_cache)
         workflow.add_node("rewrite_question", self.rewrite_question)
         workflow.add_node("tool_executor", self.tool_executor)
         workflow.add_node("generate_response", self.generate_response)
         workflow.add_node("update_chat_history", self.update_chat_history)
         workflow.add_node("summarize", self.summarization_node)
 
-        workflow.add_edge(START, "rewrite_question")
+        workflow.add_edge(START, "check_cache")
+        
+        workflow.add_conditional_edges(
+            "check_cache",
+            self.route_cache,
+            {
+                "update_chat_history": "update_chat_history",
+                "rewrite_question": "rewrite_question"
+            }
+        )
+
         workflow.add_edge("rewrite_question", "tool_executor")
         workflow.add_edge("tool_executor", "generate_response")
         workflow.add_edge("generate_response", "summarize")
@@ -152,26 +178,18 @@ class RAG:
         question = state.get("question", "")
         response = state.get("response", "")
         thread_id = state.get("thread_id", "")
+        cache_hit = state.get("cache_hit", False)
         
         pg_history = self.chat_memory.get_session_history(thread_id)
         pg_history.add_user_message(question)
         pg_history.add_ai_message(response)
         
-        if question and response:
+        if question and response and not cache_hit:
             await self.semantic_cache.add_to_cache_async(question, response)
         
         return state
 
     async def execute_workflow(self, question: str, thread_id: str):
-        cached_response = await self.semantic_cache.search_cache_async(question)
-        if cached_response:
-            yield {"content": cached_response, "cache_hit": True}
-            # Save to chat history for cache hits
-            pg_history = self.chat_memory.get_session_history(thread_id)
-            pg_history.add_user_message(question)
-            pg_history.add_ai_message(cached_response)
-            return
-        
         config = {"configurable": {"thread_id": thread_id}}
         input_message = HumanMessage(content=question)
 
@@ -184,20 +202,34 @@ class RAG:
         }
 
         try:
-            async for event in self.graph.astream(
+            # Use astream_events to catch streaming tokens from LLM and node outputs
+            async for event in self.graph.astream_events(
                 inputs,
-                stream_mode="values",
                 config=config,
+                version="v2"
             ):
-                if "messages" in event and len(event["messages"]) > 0:
-                    last_msg = event["messages"][-1]
-                    if hasattr(last_msg, "content") and last_msg.content:
-                        if not isinstance(last_msg, HumanMessage):
-                            yield {"content": last_msg.content, "cache_hit": False}
-                            return
+                event_type = event.get("event")
+                metadata = event.get("metadata", {})
+                node_name = metadata.get("langgraph_node", "")
+
+                # 1. Capture Streaming tokens from generate_response
+                if event_type == "on_chat_model_stream" and node_name == "generate_response":
+                    data = event.get("data", {})
+                    chunk = data.get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield {"content": chunk.content, "cache_hit": False}
+                
+                # 2. Capture Cache Hit from check_cache node
+                elif event_type == "on_chain_end" and node_name == "check_cache":
+                    data = event.get("data", {})
+                    output = data.get("output")
+                    # Output is the state returned by check_cache
+                    if output and isinstance(output, dict) and output.get("cache_hit"):
+                        cached_response = output.get("response")
+                        if cached_response:
+                            yield {"content": cached_response, "cache_hit": True}
                             
         except Exception as e:
             print(f"[ERROR] Workflow execution failed: {e}")
             import traceback
             traceback.print_exc()
-            raise

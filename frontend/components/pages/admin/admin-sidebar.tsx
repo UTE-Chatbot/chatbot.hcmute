@@ -27,7 +27,9 @@ import {
   FileText,
   MessageSquare,
   LayoutDashboard,
+  Settings,
 } from "lucide-react";
+import { CacheSettingsDialog } from "./cache-settings-dialog";
 
 const menuItems = [
   {
@@ -51,6 +53,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cacheDialogOpen, setCacheDialogOpen] = useState(false);
 
   useEffect(() => {
     getMaintenanceStatus()
@@ -112,20 +115,37 @@ export function AdminSidebar() {
       <SidebarFooter>
         <SidebarGroup>
           <SidebarGroupContent>
-            <div className="flex items-center justify-between px-2 py-2">
-              <Label htmlFor="maintenance-mode" className="text-sm font-medium">
-                Bảo trì
-              </Label>
-              <Switch
-                id="maintenance-mode"
-                checked={maintenanceMode}
-                onCheckedChange={handleMaintenanceToggle}
-                disabled={loading}
-              />
+            <div className="flex flex-col gap-2 p-2">
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="maintenance-mode"
+                  className="text-sm font-medium"
+                >
+                  Bảo trì
+                </Label>
+                <Switch
+                  id="maintenance-mode"
+                  checked={maintenanceMode}
+                  onCheckedChange={handleMaintenanceToggle}
+                  disabled={loading}
+                />
+              </div>
+
+              <SidebarMenuButton
+                onClick={() => setCacheDialogOpen(true)}
+                className="w-full justify-start px-2 mx-0 pl-0"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Cấu hình Cache</span>
+              </SidebarMenuButton>
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarFooter>
+      <CacheSettingsDialog
+        open={cacheDialogOpen}
+        onOpenChange={setCacheDialogOpen}
+      />
     </Sidebar>
   );
 }

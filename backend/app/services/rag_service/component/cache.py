@@ -121,6 +121,35 @@ class SemanticCache:
             print(f"[ERROR] Failed to add to cache: {e}")
             traceback.print_exc()
 
+    def set_threshold(self, threshold: float):
+        self.threshold = threshold
+
+    async def clear_cache(self):
+        try:
+            client = await self._get_redis_client()
+            pattern = f"{self.prefix}:*"
+            cursor = 0
+            keys_to_delete = []
+            
+            while True:
+                cursor, keys = await client.scan(cursor, match=pattern, count=100)
+                keys_to_delete.extend(keys)
+                if cursor == 0:
+                    break
+            
+            if keys_to_delete:
+                await client.delete(*keys_to_delete)
+                print(f"Cleared {len(keys_to_delete)} cache entries.")
+            else:
+                print("No cache entries to clear.")
+                
+            return len(keys_to_delete)
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to clear cache: {e}")
+            traceback.print_exc()
+            return 0
+
     async def close(self):
         if self._redis_client is not None:
             await self._redis_client.close()

@@ -65,7 +65,7 @@ class Settings:
     redis_password: str = os.getenv("REDIS_PASSWORD", "")
     redis_db: int = int(os.getenv("REDIS_DB", 0))
     
-    cache_ttl: int = int(os.getenv("CACHE_TTL", 3600))
+    cache_ttl: int = int(os.getenv("CACHE_TTL", 24*60*60))
     cache_threshold: float = float(os.getenv("CACHE_THRESHOLD", 0.9))
     cache_prefix: str = os.getenv("CACHE_PREFIX", "semantic_cache")
     

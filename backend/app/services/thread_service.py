@@ -243,11 +243,10 @@ def _extract_keywords_from_text(text: str, top_k: int = 10) -> List[KeywordStat]
         words = word_tokenize(text.lower())
     except ImportError:
         # Fallback to simple regex if underthesea is not installed
-        print("Warning: underthesea not found, falling back to regex")
-        sentences = re.split(r'[.!?。！？]', text.lower())
-        words = []
-        for sentence in sentences:
-            words.extend(re.findall(r'\b[\w\u0100-\uFFFF]+\b', sentence))
+        words = re.findall(r'\w+', text.lower())
+
+    if not words:
+         words = re.findall(r'\w+', text.lower())
 
     # Filter words
     cleaned_words = []
