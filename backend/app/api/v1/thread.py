@@ -14,7 +14,7 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import select, text
 from sqlalchemy.orm import selectinload
 
-from app.db.session import get_db
+from app.db.session import get_db, AsyncSessionLocal
 from app.services import thread_service
 from app.schemas.thread import (
     ThreadCreate,
@@ -259,7 +259,11 @@ async def stream_response(
     last_message = chat_request.messages[-1]
     user_question = last_message.content
 
-    await thread_service.set_thread_title_from_first_question(db, thread_id, user_question)
+    async def background_set_title(tid, q):
+        async with AsyncSessionLocal() as session:
+            await thread_service.set_thread_title_from_first_question(session, tid, q)
+
+    background_tasks.add_task(background_set_title, thread_id, user_question)
     
     client_id = get_client_id(request, current_user)
     is_admin = current_user and current_user.role == RoleEnum.ADMIN
@@ -303,9 +307,12 @@ async def stream_response(
                 yield content
             
             if not cache_hit:
+                async def background_increment(cid, admin):
+                    async with AsyncSessionLocal() as session:
+                        await thread_service.increment_rate_limit(session, cid, admin)
+
                 background_tasks.add_task(
-                    thread_service.increment_rate_limit,
-                    db,
+                    background_increment,
                     client_id,
                     is_admin
                 )

@@ -129,22 +129,13 @@ class RAG:
         workflow = StateGraph(AgentState)
 
         workflow.add_node("rewrite_question", self.rewrite_question)
-        workflow.add_node("check_cache", self.check_cache)
         workflow.add_node("tool_executor", self.tool_executor)
         workflow.add_node("generate_response", self.generate_response)
         workflow.add_node("update_chat_history", self.update_chat_history)
         workflow.add_node("summarize", self.summarization_node)
 
         workflow.add_edge(START, "rewrite_question")
-        workflow.add_edge("rewrite_question", "check_cache")
-        workflow.add_conditional_edges(
-            "check_cache",
-            self.route_after_cache,
-            {
-                "tool_executor": "tool_executor",
-                "update_chat_history": "update_chat_history"
-            }
-        )
+        workflow.add_edge("rewrite_question", "tool_executor")
         workflow.add_edge("tool_executor", "generate_response")
         workflow.add_edge("generate_response", "summarize")
         workflow.add_edge("summarize", "update_chat_history")
@@ -153,22 +144,6 @@ class RAG:
         checkpointer = await get_checkpointer()
         self.graph = workflow.compile(checkpointer=checkpointer)
 
-    async def check_cache(self, state: AgentState) -> AgentState:
-        question = state.get("question", "")
-        if not question:
-            return {**state, "cache_hit": False}
-        
-        cached_response = await self.semantic_cache.search_cache_async(question)
-        
-        if cached_response:
-            return {**state, "cache_hit": True, "response": cached_response}
-        else:
-            return {**state, "cache_hit": False}
-
-    def route_after_cache(self, state: AgentState) -> Literal["tool_executor", "update_chat_history"]:
-        if state.get("cache_hit", False):
-            return "update_chat_history"
-        return "tool_executor"
 
     async def rewrite_question(self, state: AgentState) -> AgentState:
         return state
@@ -177,18 +152,26 @@ class RAG:
         question = state.get("question", "")
         response = state.get("response", "")
         thread_id = state.get("thread_id", "")
-        cache_hit = state.get("cache_hit", False)
         
         pg_history = self.chat_memory.get_session_history(thread_id)
         pg_history.add_user_message(question)
         pg_history.add_ai_message(response)
         
-        if not cache_hit and question and response:
+        if question and response:
             await self.semantic_cache.add_to_cache_async(question, response)
         
         return state
 
     async def execute_workflow(self, question: str, thread_id: str):
+        cached_response = await self.semantic_cache.search_cache_async(question)
+        if cached_response:
+            yield {"content": cached_response, "cache_hit": True}
+            # Save to chat history for cache hits
+            pg_history = self.chat_memory.get_session_history(thread_id)
+            pg_history.add_user_message(question)
+            pg_history.add_ai_message(cached_response)
+            return
+        
         config = {"configurable": {"thread_id": thread_id}}
         input_message = HumanMessage(content=question)
 
@@ -196,30 +179,21 @@ class RAG:
             "question": question,
             "thread_id": thread_id,
             "messages": [input_message],
-            "cache_hit": None,
+            "cache_hit": False,
             "information": [],
         }
 
         try:
-            cache_hit = False
-            final_state = None
             async for event in self.graph.astream(
                 inputs,
                 stream_mode="values",
                 config=config,
             ):
-                final_state = event
-                
-                if event.get("cache_hit") and event.get("response"):
-                    cache_hit = True
-                    yield {"content": event["response"], "cache_hit": cache_hit}
-                    return
-                
                 if "messages" in event and len(event["messages"]) > 0:
                     last_msg = event["messages"][-1]
                     if hasattr(last_msg, "content") and last_msg.content:
                         if not isinstance(last_msg, HumanMessage):
-                            yield {"content": last_msg.content, "cache_hit": cache_hit}
+                            yield {"content": last_msg.content, "cache_hit": False}
                             return
                             
         except Exception as e:
