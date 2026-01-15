@@ -17,7 +17,14 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip setuptools wheel \
+ && pip install pbr \
+ && pip install \
+    --no-cache-dir \
+    --timeout 120 \
+    --retries 10 \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    -r requirements.txt
 
 # Copy application code
 COPY . .

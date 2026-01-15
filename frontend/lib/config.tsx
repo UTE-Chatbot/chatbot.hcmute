@@ -36,12 +36,12 @@ type HeaderItem =
 export const BLUR_FADE_DELAY = 0.15;
 
 export const siteConfig = {
-  name: "Chatbot Tư Vấn Tuyển Sinh | Trường Đại Học Sư Phạm Kỹ Thuật TP. Hồ Chí Minh",
+  name: "Chatbot Tư Vấn Tuyển Sinh | Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh",
   shortName: "Chatbot Tư Vấn Tuyển Sinh | HCMUTE",
   description:
-    "Chatbot tư vấn tuyển sinh của Trường Đại Học Sư Phạm Kỹ Thuật TP. Hồ Chí Minh. Giải đáp thông tin về ngành học, điểm chuẩn và thủ tục tuyển sinh.",
+    "Chatbot tư vấn tuyển sinh của Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh. Giải đáp thông tin về ngành học, điểm chuẩn và thủ tục tuyển sinh.",
   ogDescription:
-    "Chatbot tư vấn tuyển sinh của Trường Đại Học Sư Phạm Kỹ Thuật TP. Hồ Chí Minh. Hỗ trợ thông tin tuyển sinh 24/7.",
+    "Chatbot tư vấn tuyển sinh của Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh. Hỗ trợ thông tin tuyển sinh 24/7.",
   url: "https://chatbot.hcmute.edu.vn/",
   ogImage:
     "https://res.cloudinary.com/dh7w9mvrq/image/upload/v1744577513/471306834_1312910153458292_2571871794578179435_n_w28hmt.jpg",

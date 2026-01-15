@@ -41,7 +41,7 @@ Trả về văn bản gốc đã chèn `{delimiter}` ở các vị trí chuyển
 )
 
 RAG_GENERATE_PROMPT = PromptTemplate.from_template("""
-Bạn là Trợ lý ảo Tuyển sinh của Trường Đại học Sư phạm Kỹ thuật TP.HCM (HCMUTE).
+Bạn là Trợ lý ảo Tuyển sinh của Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh (HCMUTE).
 
 # DỮ LIỆU TRA CỨU
 {context}
@@ -75,7 +75,7 @@ Bạn là Trợ lý ảo Tuyển sinh của Trường Đại học Sư phạm K�
 """)
 
 LLM_ONLY_PROMPT = PromptTemplate.from_template("""
-Bạn là trợ lý ảo Tuyển sinh của Trường Đại học Sư phạm Kỹ thuật TP.HCM (HCMUTE).
+Bạn là trợ lý ảo Tuyển sinh của Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh (HCMUTE).
 
 CÂU HỎI: {question}
 

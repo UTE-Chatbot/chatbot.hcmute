@@ -16,7 +16,8 @@ const EXPLORE_ITEMS = [
   },
   {
     title: "Website HCMUTE",
-    description: "Cổng thông tin chính thức của trường ĐH SPKT TP.HCM.",
+    description:
+      "Cổng thông tin chính thức của Trường Đại học Công nghệ Kỹ Thuật TP. Hồ Chí Minh.",
     href: "https://hcmute.edu.vn",
     icon: Globe,
   },

@@ -20,10 +20,16 @@ import {
   CheckCircle,
   BookIcon,
   UniversityIcon,
+  Calendar,
 } from "lucide-react";
 import { type SuggestionItem } from "@/components/pages/chat/chat-types";
 
 const suggestions: SuggestionItem[] = [
+  {
+    key: "openday",
+    icon: <Calendar className="w-5 h-5" style={{ color: "#E11D48" }} />,
+    description: "Thông tin Open Day HCMUTE 2026",
+  },
   {
     key: "1",
     icon: <Lightbulb className="w-5 h-5" style={{ color: "#FFD700" }} />,
@@ -138,6 +144,7 @@ const Example = () => {
   const handleSuggestionClick = async (suggestion: string) => {
     if (status === "streaming" || status === "submitted" || isSubmitting)
       return;
+
     await handleSubmit({ text: suggestion } as any);
   };
 
@@ -151,36 +158,38 @@ const Example = () => {
   };
 
   return (
-    <div className="relative flex size-full flex-col divide-y overflow-hidden bg-background">
-      {messages.length === 0 ? (
-        <ChatEmptyState
-          userFullName={user?.full_name}
-          suggestions={suggestions}
-          handleSuggestionClick={handleSuggestionClick}
-          text={input}
-          setText={setInput}
-          handleSubmit={handleSubmit}
-          status={status}
-          useMicrophone={useMicrophone}
-          setUseMicrophone={setUseMicrophone}
-          isSubmitting={isSubmitting}
-        />
-      ) : (
-        <ChatMessageList
-          messages={messages}
-          suggestions={suggestions}
-          handleNewChat={handleNewChat}
-          handleSuggestionClick={handleSuggestionClick}
-          text={input}
-          setText={setInput}
-          handleSubmit={handleSubmit}
-          status={status}
-          useMicrophone={useMicrophone}
-          setUseMicrophone={setUseMicrophone}
-          isSubmitting={isSubmitting}
-        />
-      )}
-    </div>
+    <>
+      <div className="relative flex size-full flex-col divide-y overflow-hidden bg-background">
+        {messages.length === 0 ? (
+          <ChatEmptyState
+            userFullName={user?.full_name}
+            suggestions={suggestions}
+            handleSuggestionClick={handleSuggestionClick}
+            text={input}
+            setText={setInput}
+            handleSubmit={handleSubmit}
+            status={status}
+            useMicrophone={useMicrophone}
+            setUseMicrophone={setUseMicrophone}
+            isSubmitting={isSubmitting}
+          />
+        ) : (
+          <ChatMessageList
+            messages={messages}
+            suggestions={suggestions}
+            handleNewChat={handleNewChat}
+            handleSuggestionClick={handleSuggestionClick}
+            text={input}
+            setText={setInput}
+            handleSubmit={handleSubmit}
+            status={status}
+            useMicrophone={useMicrophone}
+            setUseMicrophone={setUseMicrophone}
+            isSubmitting={isSubmitting}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

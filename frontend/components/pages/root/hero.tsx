@@ -86,7 +86,7 @@ function HeroTitles() {
           ease,
         }}
       >
-        Trường Đại học Sư Phạm Kỹ Thuật TP. Hồ Chí Minh
+        Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh
       </motion.p>
     </div>
   );

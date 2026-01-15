@@ -83,12 +83,12 @@ export function constructMetadata({
     metadataBase: new URL(siteConfig.url),
     authors: [
       {
-        name: "Trường Đại học Sư phạm Kỹ thuật TP. Hồ Chí Minh",
+        name: "Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh",
         url: siteConfig.url,
       },
     ],
     creator: "HCMUTE",
-    publisher: "Trường Đại học Sư phạm Kỹ thuật TP. Hồ Chí Minh",
+    publisher: "Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh",
     ...props,
   };
 }

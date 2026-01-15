@@ -53,7 +53,7 @@ export function WebsiteJsonLd() {
     },
     publisher: {
       "@type": "Organization",
-      name: "Trường Đại học Sư phạm Kỹ thuật TP. Hồ Chí Minh",
+      name: "Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí Minh",
       url: "https://hcmute.edu.vn",
     },
   };
