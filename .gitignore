@@ -1,3 +1,7 @@
-./ssl 
-./hcmute.edu.vn_2024
 ssl/
+hcmute.edu.vn_2024/
+hcmute.edu.vn_2024*
+.agents/
+pp/
+source_code.zip
+skills-lock.json

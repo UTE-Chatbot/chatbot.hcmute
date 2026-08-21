@@ -2,13 +2,12 @@ from app.services.csv_tables_service import execute_sql_query
 from app.services.rag_service.component.prompt import TEXT2SQL_PROMPT_TEMPLATE
 from app.services.rag_service.component.llms import get_cost_effective_chat_model
 from app.services.csv_tables_service import get_cached_tables_schema
-from app.utils.sql import sql_query_extract, validate_sql
+from app.utils.sql import sql_query_extract, validate_sql, enforce_limit
+
 class Text2SQL:
     def __init__(self):
         self.llm = get_cost_effective_chat_model()
         pass 
-    
-    
     
     async def execute(self, query_text: str) -> str:
         tables_with_db_schema = get_cached_tables_schema()
@@ -22,6 +21,8 @@ class Text2SQL:
         query = sql_query_extract(query)
         if not validate_sql(query):
             return ""
+        
+        query = enforce_limit(query, default_limit=50)
     
         sql_result = execute_sql_query(query)
         if not isinstance(sql_result, str):

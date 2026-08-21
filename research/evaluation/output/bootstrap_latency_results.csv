@@ -1,0 +1,4 @@
+Pipeline,N,latency_s_mean,latency_s_95ci_lower,latency_s_95ci_upper,latency_s_bootstrap_std,latency_cached_s_mean,latency_cached_s_95ci_lower,latency_cached_s_95ci_upper,latency_cached_s_bootstrap_std
+basic_rag,600,6.2103,5.8726,6.5963,0.1843,0.2888,0.2797,0.2988,0.0049
+llm_only,600,19.2055,18.8157,19.6093,0.2019,0.3209,0.3033,0.3421,0.01
+our_rag,600,22.6153,22.0091,23.2502,0.3154,0.2914,0.2824,0.301,0.0048

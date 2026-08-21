@@ -43,6 +43,7 @@ export interface MaintenanceStatus {
 export interface MessageResponse {
   role: "human" | "ai";
   content: string;
+  information?: string[];
 }
 
 /**
@@ -111,9 +112,41 @@ export interface DashboardStatsResponse {
   thread_counts: ThreadCountByDate[];
   popular_keywords: KeywordStat[];
   popular_topics: string[];
+  total_feedbacks?: number;
+  average_rating?: number;
+  accurate_percentage?: number;
+  helpful_percentage?: number;
+  understandable_percentage?: number;
 }
 
 /**
  * Thread list response
  */
 export type ThreadListResponse = PageResponse<ThreadResponse>;
+
+export interface ThreadFeedbackCreate {
+  rating: number;
+  is_accurate?: boolean;
+  is_helpful?: boolean;
+  is_understandable?: boolean;
+  comment?: string | null;
+}
+
+export interface ThreadFeedbackResponse {
+  id: string;
+  thread_id: string;
+  rating: number;
+  is_accurate?: boolean | null;
+  is_helpful?: boolean | null;
+  is_understandable?: boolean | null;
+  comment?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  thread?: {
+    thread_id: string;
+    title?: string | null;
+  } | null;
+}
+
+export type FeedbackListResponse = PageResponse<ThreadFeedbackResponse>;
+

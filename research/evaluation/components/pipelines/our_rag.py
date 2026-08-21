@@ -19,6 +19,7 @@ class PipelineResult:
     context: List[str]
     doc_ids: List[str]
     answer: str
+    tool_used: str = "none"
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "dataset"
 DB_PATH = str(ASSETS_DIR / "csv_tables.db")
@@ -56,16 +57,21 @@ class OurRAGPipeline:
         temperature: float = 0.0,
         reranker: Optional[JinaReranker] = None,
         rerank_top_k: int = 5,
-        use_query_expansion: bool = True
+        use_query_expansion: bool = True,
+        use_tool_routing: bool = True,
+        disable_text2sql: bool = False,
+        seed: int = None,
     ):
         self.vector_store = vector_store
         self.k = k
-        self.llm = ChatOpenAI(model=model_name, temperature=temperature, api_key=settings.api_key)
-        self.tool_llm = ChatOpenAI(model=model_name, temperature=0, api_key=settings.api_key)
+        self.llm = ChatOpenAI(model=model_name, temperature=temperature, api_key=settings.api_key, seed=seed)
+        self.tool_llm = ChatOpenAI(model=model_name, temperature=0, api_key=settings.api_key, seed=seed)
         self.schema = load_table_schema()
         self.reranker = reranker
         self.rerank_top_k = rerank_top_k
         self.use_query_expansion = use_query_expansion
+        self.use_tool_routing = use_tool_routing
+        self.disable_text2sql = disable_text2sql
 
     async def _expand_query(self, question: str) -> List[str]:
         if not self.use_query_expansion:
@@ -152,7 +158,12 @@ Chỉ trả về câu SQL, không giải thích.
             sql = sql.split("```")[1].replace("sql", "").strip()
         return execute_sql_query(sql)
 
-    async def _select_and_execute_tools(self, question: str) -> tuple[List[str], List[str]]:
+    async def _select_and_execute_tools(self, question: str) -> tuple[List[str], List[str], List[str]]:
+        # Ablation: skip tool routing → always document_search
+        if not self.use_tool_routing:
+            ctx, ids = await self._document_search(question)
+            return ctx, ids, ["document_search"]
+
         tools = [
             {
                 "type": "function",
@@ -166,7 +177,11 @@ Chỉ trả về câu SQL, không giải thích.
                     }
                 }
             },
-            {
+        ]
+
+        # Ablation: only add text2sql tool if not disabled
+        if not self.disable_text2sql:
+            tools.append({
                 "type": "function",
                 "function": {
                     "name": "text2sql_tool",
@@ -177,14 +192,14 @@ Chỉ trả về câu SQL, không giải thích.
                         "required": ["query_text"]
                     }
                 }
-            }
-        ]
+            })
 
         prompt = TOOL_SELECTION_PROMPT.format(schema=self.schema, question=question)
         response = await self.tool_llm.bind(tools=tools).ainvoke([HumanMessage(content=prompt)])
 
         all_context = []
         all_doc_ids = []
+        tools_used = []
 
         if hasattr(response, 'tool_calls') and response.tool_calls:
             for tool_call in response.tool_calls:
@@ -194,15 +209,18 @@ Chỉ trả về câu SQL, không giải thích.
                     ctx, ids = await self._document_search(args.get("query", question))
                     all_context.extend(ctx)
                     all_doc_ids.extend(ids)
+                    tools_used.append("document_search")
                 elif name == "text2sql_tool":
                     result = await self._text2sql(args.get("query_text", question))
                     all_context.append(result)
+                    tools_used.append("text2sql")
         else:
             ctx, ids = await self._document_search(question)
             all_context.extend(ctx)
             all_doc_ids.extend(ids)
+            tools_used.append("document_search")
 
-        return all_context, all_doc_ids
+        return all_context, all_doc_ids, tools_used
 
     async def _generate_response(self, question: str, context: List[str]) -> str:
         context_str = "\n\n".join(context)
@@ -211,11 +229,12 @@ Chỉ trả về câu SQL, không giải thích.
         return response.content
 
     async def run(self, question: str) -> PipelineResult:
-        context, doc_ids = await self._select_and_execute_tools(question)
+        context, doc_ids, tools_used = await self._select_and_execute_tools(question)
         answer = await self._generate_response(question, context)
         return PipelineResult(
             question=question,
             context=context,
             doc_ids=doc_ids,
-            answer=answer
+            answer=answer,
+            tool_used=",".join(tools_used) if tools_used else "none",
         )

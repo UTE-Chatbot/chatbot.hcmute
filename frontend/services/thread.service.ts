@@ -14,6 +14,9 @@ import type {
   DashboardStatsResponse,
   ChatRequest,
   MaintenanceStatus,
+  ThreadFeedbackCreate,
+  ThreadFeedbackResponse,
+  FeedbackListResponse,
 } from "@/types/thread";
 
 /**
@@ -233,6 +236,46 @@ export const setMaintenanceStatus = async (
   return response.data;
 };
 
+export const submitFeedback = async (
+  threadId: string,
+  data: ThreadFeedbackCreate
+): Promise<ThreadFeedbackResponse> => {
+  const response = await api.post<ThreadFeedbackResponse>(
+    `/threads/${threadId}/feedback`,
+    data
+  );
+  return response.data;
+};
+
+export const getFeedbacks = async (
+  params: QueryParams = {}
+): Promise<FeedbackListResponse> => {
+  const queryString = buildQueryString(params);
+  const url = `/threads/feedback/admin/list${queryString ? `?${queryString}` : ""}`;
+  const response = await api.get<FeedbackListResponse>(url);
+  return response.data;
+};
+
+export const deleteFeedback = async (feedbackId: string): Promise<void> => {
+  await api.delete(`/threads/feedback/admin/${feedbackId}`);
+};
+
+export const exportFeedbackCsv = async (
+  startDate?: Date,
+  endDate?: Date
+): Promise<void> => {
+  const params: any = {};
+  if (startDate) params.start_date = startDate.toISOString();
+  if (endDate) params.end_date = endDate.toISOString();
+
+  const queryString = new URLSearchParams(params).toString();
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/threads/feedback/admin/export-csv${
+    queryString ? `?${queryString}` : ""
+  }`;
+
+  window.open(url, "_blank");
+};
+
 // Export all thread-related service functions
 export default {
   getThreads,
@@ -247,4 +290,8 @@ export default {
   exportThreadCsv,
   getMaintenanceStatus,
   setMaintenanceStatus,
+  submitFeedback,
+  getFeedbacks,
+  deleteFeedback,
+  exportFeedbackCsv,
 };

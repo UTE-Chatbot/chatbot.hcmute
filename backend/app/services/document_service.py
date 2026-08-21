@@ -316,4 +316,88 @@ async def search_document(query: str, top_k: int = 5) :
     except Exception as e:
         logger.error(f"Error searching document: {str(e)}")
         return []
+
+
+async def keyword_search_chunks(
+    session: AsyncSession,
+    keyword: str,
+    page: int = 1,
+    size: int = 20
+) -> Dict[str, Any]:
+    """Search chunks by keyword (text contains)."""
+    offset = (page - 1) * size
     
+    count_query = select(DocumentChunk).where(DocumentChunk.text.ilike(f"%{keyword}%"))
+    count_result = await session.execute(count_query)
+    total = len(count_result.scalars().all())
+    
+    query = (
+        select(DocumentChunk)
+        .where(DocumentChunk.text.ilike(f"%{keyword}%"))
+        .offset(offset)
+        .limit(size)
+        .order_by(DocumentChunk.document_id, DocumentChunk.chunk_index)
+    )
+    result = await session.execute(query)
+    chunks = result.scalars().all()
+    
+    return {
+        "items": chunks,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": (total + size - 1) // size if size > 0 else 0
+    }
+
+
+async def bulk_replace_keyword_in_chunks(
+    session: AsyncSession,
+    keyword: str,
+    replacement: str,
+    chunk_ids: Optional[List[int]] = None
+) -> Dict[str, Any]:
+    """Replace keyword in chunks. If chunk_ids is None, replace in all matching chunks."""
+    query = select(DocumentChunk).where(DocumentChunk.text.ilike(f"%{keyword}%"))
+    if chunk_ids:
+        query = query.where(DocumentChunk.id.in_(chunk_ids))
+    
+    result = await session.execute(query)
+    chunks = result.scalars().all()
+    
+    updated_count = 0
+    updated_chunk_ids = []
+    
+    for chunk in chunks:
+        if keyword.lower() in chunk.text.lower():
+            import re
+            new_text = re.sub(re.escape(keyword), replacement, chunk.text, flags=re.IGNORECASE)
+            chunk.text = new_text
+            updated_chunk_ids.append(chunk.id)
+            updated_count += 1
+    
+    await session.commit()
+    
+    for chunk in chunks:
+        if chunk.id in updated_chunk_ids:
+            document = await get_document_by_id(session, chunk.document_id)
+            if document and chunk.point_id:
+                try:
+                    await vector_store.adelete(ids=[chunk.point_id])
+                except Exception as e:
+                    logger.error(f"Error deleting old vector for chunk {chunk.id}: {str(e)}")
+                
+                vector_doc = create_chunk_document(
+                    content=chunk.text,
+                    chunk_index=chunk.chunk_index,
+                    chunk_method="bulk_replace",
+                    document=document
+                )
+                point_ids = await vector_store.aadd_documents([vector_doc])
+                chunk.point_id = point_ids[0] if point_ids else None
+    
+    await session.commit()
+    
+    return {
+        "updated_count": updated_count,
+        "updated_chunk_ids": updated_chunk_ids
+    }

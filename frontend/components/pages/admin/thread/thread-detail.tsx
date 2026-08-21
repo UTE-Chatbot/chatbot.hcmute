@@ -179,6 +179,23 @@ export function ThreadDetail({ threadId, user, onBack }: ThreadDetailProps) {
                     className={role === "user" ? "!bg-primary !text-white" : ""}
                   >
                     <MediaContent>{msg.content}</MediaContent>
+                    {role === "assistant" && msg.information && msg.information.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 mb-2">
+                          Bối cảnh đã truy xuất (Retrieved Contexts):
+                        </p>
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                          {msg.information.map((infoText, infoIdx) => (
+                            <div
+                              key={infoIdx}
+                              className="text-xs bg-gray-50 text-gray-700 p-2 rounded-lg border border-gray-100 font-mono whitespace-pre-wrap leading-relaxed"
+                            >
+                              {infoText}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </MessageContent>
                 </Message>
               );

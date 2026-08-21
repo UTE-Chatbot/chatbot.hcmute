@@ -50,4 +50,16 @@ def sql_query_extract(text: str) -> str:
         text = text[:-1] 
         
     return text.strip()
-        
+
+
+def enforce_limit(sql_query: str, default_limit: int = 50) -> str:
+    """Ensure SQL query has a LIMIT clause to prevent fetching too many rows."""
+    sql_upper = sql_query.upper().strip()
+    
+    if not sql_upper.startswith("SELECT"):
+        return sql_query
+    
+    if "LIMIT" in sql_upper:
+        return sql_query
+    
+    return f"{sql_query.strip()} LIMIT {default_limit}"

@@ -14,6 +14,7 @@ class PipelineResult:
     context: List[str]
     doc_ids: List[str]
     answer: str
+    tool_used: str = "none"
 
 class BasicRAGPipeline:
     """
@@ -26,11 +27,12 @@ class BasicRAGPipeline:
         model_name: str = "gpt-5-mini",
         temperature: float = 0.0,
         reranker: Optional[JinaReranker] = None,
-        rerank_top_k: int = 5
+        rerank_top_k: int = 5,
+        seed: int = None,
     ):
         self.vector_store = vector_store
         self.k = k
-        self.llm = ChatOpenAI(model=model_name, temperature=temperature, api_key=settings.api_key)
+        self.llm = ChatOpenAI(model=model_name, temperature=temperature, api_key=settings.api_key, seed=seed)
         self.reranker = reranker
         self.rerank_top_k = rerank_top_k
 
@@ -64,5 +66,6 @@ class BasicRAGPipeline:
             question=question,
             context=context,
             doc_ids=doc_ids,
-            answer=answer
+            answer=answer,
+            tool_used="document_search",
         )

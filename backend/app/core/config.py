@@ -19,7 +19,7 @@ class Settings:
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     jwt_access_token_expire_minutes: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 60))
     session_secret_key: str = os.getenv("SESSION_SECRET_KEY", "super-secret-session-key")
-    allow_origins: List[str] = os.getenv("ALLOW_ORIGINS", "").split(",")
+    allow_origins: List[str] = [origin.strip().strip('"').strip("'") for origin in os.getenv("ALLOW_ORIGINS", "").split(",") if origin.strip()]
    
     postgres_user: str = os.getenv("POSTGRES_USER", "")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "") 

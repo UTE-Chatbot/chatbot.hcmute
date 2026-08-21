@@ -518,9 +518,9 @@ export function ContactModal({ trigger, open, setOpen }: ContactModalProps) {
               Hoạt động tư vấn hướng nghiệp và tuyển sinh đóng vai trò quan
               trọng trong việc hỗ trợ thí sinh hiểu rõ về quy trình tuyển sinh,
               các cơ hội học vụ và đưa ra lựa chọn phù hợp với năng lực và sở
-              thích của thí sinh. Trường Đại học Sư phạm Kỹ thuật TP.HCM tự hào
-              khi có một đội ngũ tư vấn viên tư vấn hướng nghiệp và tuyển sinh
-              chuyên nghiệp:
+              thích của thí sinh. Trường Đại học Công nghệ Kỹ thuật TP. Hồ Chí
+              Minh tự hào khi có một đội ngũ tư vấn viên tư vấn hướng nghiệp và
+              tuyển sinh chuyên nghiệp:
             </p>
             <div className="flex flex-wrap gap-2">
               <p className="font-semibold">Tổng Đài:</p>
@@ -595,7 +595,8 @@ export function ContactModal({ trigger, open, setOpen }: ContactModalProps) {
                     onClick={() => setShowFacultyAdvisors(true)}
                     className="gap-2"
                   >
-                    Xem chi tiết <ChevronDown className="w-4 h-4" />
+                    Xem thêm về danh sách ngành đào tạo{" "}
+                    <ChevronDown className="w-4 h-4" />
                   </Button>
                 </div>
               ) : (

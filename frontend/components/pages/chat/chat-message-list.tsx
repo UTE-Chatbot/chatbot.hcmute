@@ -27,7 +27,7 @@ import {
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, CheckSquare } from "lucide-react";
 import Loader from "@/components/ui/loader";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import ChatPromptInput from "@/components/pages/chat/prompt-input";
@@ -124,6 +124,7 @@ interface ChatMessageListProps {
   useMicrophone: boolean;
   setUseMicrophone: (use: boolean) => void;
   isSubmitting: boolean;
+  onEndConversation: () => void;
 }
 
 const ChatMessageList = ({
@@ -138,6 +139,7 @@ const ChatMessageList = ({
   useMicrophone,
   setUseMicrophone,
   isSubmitting,
+  onEndConversation,
 }: ChatMessageListProps) => {
   return (
     <>
@@ -208,6 +210,16 @@ const ChatMessageList = ({
             <PlusIcon className="mr-2 size-4" />
             Cuộc trò chuyện mới
           </Suggestion>
+          {messages.length > 0 && (
+            <Suggestion
+              className="text-white bg-rose-600 hover:bg-rose-700 hover:!text-white transition-colors"
+              onClick={onEndConversation}
+              suggestion="Kết thúc hội thoại"
+            >
+              <CheckSquare className="mr-2 size-4" />
+              Kết thúc & đánh giá
+            </Suggestion>
+          )}
           {suggestions.map((suggestion) => (
             <Suggestion
               key={suggestion.key}

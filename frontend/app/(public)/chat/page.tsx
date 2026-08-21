@@ -11,7 +11,8 @@ import { useChat } from "@ai-sdk/react";
 import { TextStreamChatTransport } from "ai";
 import Visitor from "@/lib/visitor";
 import { nanoid } from "nanoid";
-import { createNewThread } from "@/services/thread.service";
+import { createNewThread, submitFeedback } from "@/services/thread.service";
+import { FeedbackDialog } from "@/components/pages/chat/feedback-dialog";
 
 import {
   Lightbulb,
@@ -23,6 +24,15 @@ import {
   Calendar,
 } from "lucide-react";
 import { type SuggestionItem } from "@/components/pages/chat/chat-types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const suggestions: SuggestionItem[] = [
   {
@@ -59,6 +69,8 @@ const Example = () => {
   const threadIdRef = useRef<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOpenDayModal, setShowOpenDayModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     const initVisitor = async () => {
@@ -145,6 +157,11 @@ const Example = () => {
     if (status === "streaming" || status === "submitted" || isSubmitting)
       return;
 
+    if (suggestion === "Thông tin Open Day HCMUTE 2026") {
+      setShowOpenDayModal(true);
+      return;
+    }
+
     await handleSubmit({ text: suggestion } as any);
   };
 
@@ -157,8 +174,59 @@ const Example = () => {
     setIsSubmitting(false);
   };
 
+  const handleEndConversation = () => {
+    if (!threadId) return;
+    setShowFeedbackModal(true);
+  };
+
+  const handleFeedbackSubmit = async (data: any) => {
+    if (!threadId) return;
+    try {
+      await submitFeedback(threadId, data);
+      toast.success("Cảm ơn bạn đã đóng góp ý kiến!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Không thể gửi đánh giá, nhưng cuộc trò chuyện đã kết thúc");
+    } finally {
+      setShowFeedbackModal(false);
+      handleNewChat();
+    }
+  };
+
+  const handleFeedbackSkip = () => {
+    setShowFeedbackModal(false);
+    handleNewChat();
+  };
+
   return (
     <>
+      <Dialog open={showOpenDayModal} onOpenChange={setShowOpenDayModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận chuyển trang</DialogTitle>
+            <DialogDescription>
+              Bạn có muốn chuyển đến trang Open Day (openday.hcmute.edu.vn)
+              không?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowOpenDayModal(false)}
+            >
+              Huỷ
+            </Button>
+            <Button
+              onClick={() => {
+                window.open("https://openday.hcmute.edu.vn", "_blank");
+                setShowOpenDayModal(false);
+              }}
+            >
+              Đồng ý
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="relative flex size-full flex-col divide-y overflow-hidden bg-background">
         {messages.length === 0 ? (
           <ChatEmptyState
@@ -186,9 +254,16 @@ const Example = () => {
             useMicrophone={useMicrophone}
             setUseMicrophone={setUseMicrophone}
             isSubmitting={isSubmitting}
+            onEndConversation={handleEndConversation}
           />
         )}
       </div>
+      <FeedbackDialog
+        open={showFeedbackModal}
+        onOpenChange={setShowFeedbackModal}
+        onSubmit={handleFeedbackSubmit}
+        onSkip={handleFeedbackSkip}
+      />
     </>
   );
 };

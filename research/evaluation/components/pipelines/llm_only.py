@@ -11,6 +11,7 @@ class PipelineResult:
     context: List[str]
     doc_ids: List[str]
     answer: str
+    tool_used: str = "none"
 
 class LLMOnlyPipeline:
     """
@@ -19,9 +20,10 @@ class LLMOnlyPipeline:
     def __init__(
         self,
         model_name: str = "gpt-4o-mini",
-        temperature: float = 0.0
+        temperature: float = 0.0,
+        seed: int = None,
     ):
-        self.llm = ChatOpenAI(model=model_name, temperature=temperature, api_key=settings.api_key)
+        self.llm = ChatOpenAI(model=model_name, temperature=temperature, api_key=settings.api_key, seed=seed)
 
     async def run(self, question: str) -> PipelineResult:
         prompt = LLM_ONLY_PROMPT.format(question=question)
@@ -30,5 +32,6 @@ class LLMOnlyPipeline:
             question=question,
             context=[],
             doc_ids=[],
-            answer=response.content
+            answer=response.content,
+            tool_used="none",
         )

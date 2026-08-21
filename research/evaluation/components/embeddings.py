@@ -33,5 +33,6 @@ def get_dense_embedding_model() -> Embeddings:
     if provider == "OPENAI":
         api_key = settings.api_key  
         dense_embedding = OpenAIEmbeddings(model=model, api_key=api_key)
+    print(f"dense_embedding: {dense_embedding}")
     return dense_embedding
     

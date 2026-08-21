@@ -330,6 +330,59 @@ export const searchChunks = async (
   return response.data;
 };
 
+export interface KeywordSearchResult {
+  id: number;
+  document_id: number;
+  document_name: string;
+  chunk_index: number;
+  text: string;
+  topic: string | null;
+  subtopic: string | null;
+}
+
+export interface KeywordSearchResponse {
+  items: KeywordSearchResult[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+export const keywordSearchChunks = async (
+  keyword: string,
+  page: number = 1,
+  size: number = 20
+): Promise<KeywordSearchResponse> => {
+  const response = await api.get<KeywordSearchResponse>(
+    "/documents/chunks/keyword-search",
+    {
+      params: { keyword, page, size },
+    }
+  );
+  return response.data;
+};
+
+export interface BulkReplaceRequest {
+  keyword: string;
+  replacement: string;
+  chunk_ids?: number[];
+}
+
+export interface BulkReplaceResponse {
+  updated_count: number;
+  updated_chunk_ids: number[];
+}
+
+export const bulkReplaceKeyword = async (
+  request: BulkReplaceRequest
+): Promise<BulkReplaceResponse> => {
+  const response = await api.post<BulkReplaceResponse>(
+    "/documents/chunks/bulk-replace",
+    request
+  );
+  return response.data;
+};
+
 /**
  * Helper function to build filter objects
  */

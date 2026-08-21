@@ -26,6 +26,7 @@ from app.schemas.thread import (
     QuestionRequest,
     ChatRequest,
 )
+from app.schemas.thread_feedback import ThreadFeedbackCreate, ThreadFeedbackResponse
 from app.core.deps import require_roles, get_current_user_optional
 from app.core.config import settings
 from app.models.user import RoleEnum, User
@@ -325,6 +326,87 @@ async def stream_response(
     response = StreamingResponse(stream(), media_type="text/plain")
     response.headers["x-vercel-ai-data-stream"] = "v1"
     return response
+
+@router.post("/{thread_id}/feedback", response_model=ThreadFeedbackResponse)
+async def submit_thread_feedback(
+    thread_id: UUID,
+    body: ThreadFeedbackCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    from app.services import feedback_service
+    feedback = await feedback_service.submit_feedback(db, thread_id, body)
+    return feedback
+
+@router.get("/feedback/admin/list", response_model=Page[ThreadFeedbackResponse])
+async def list_feedbacks(
+    rating: Optional[int] = Query(None, description="Filter by rating"),
+    search: Optional[str] = Query(None, description="Search in comment or thread title"),
+    start_date: Optional[datetime] = Query(None, description="Filter by start date"),
+    end_date: Optional[datetime] = Query(None, description="Filter by end date"),
+    params: Params = Depends(),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
+):
+    from app.models.thread_feedback import ThreadFeedback
+    from app.models.thread import Thread
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import or_
+
+    query = select(ThreadFeedback).join(Thread).options(joinedload(ThreadFeedback.thread))
+
+    if rating is not None:
+        query = query.where(ThreadFeedback.rating == rating)
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(or_(
+            ThreadFeedback.comment.ilike(search_pattern),
+            Thread.title.ilike(search_pattern)
+        ))
+    if start_date:
+        if start_date.tzinfo:
+            start_date = start_date.replace(tzinfo=None)
+        query = query.where(ThreadFeedback.created_at >= start_date)
+    if end_date:
+        if end_date.tzinfo:
+            end_date = end_date.replace(tzinfo=None)
+        query = query.where(ThreadFeedback.created_at <= end_date)
+
+    query = query.order_by(ThreadFeedback.created_at.desc())
+    return await paginate(db, query, params)
+
+@router.delete("/feedback/admin/{feedback_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_feedback(
+    feedback_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
+):
+    from app.services import feedback_service
+    deleted = await feedback_service.delete_feedback(db, feedback_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Feedback not found"
+        )
+    return None
+
+@router.get("/feedback/admin/export-csv")
+async def export_feedback_csv(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN)),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.services import feedback_service
+    csv_content = await feedback_service.generate_csv_export(db, start_date, end_date)
+    filename = f"feedback_report_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
+    content_with_bom = "\ufeff" + csv_content
+
+    return Response(
+        content=content_with_bom,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 
 
 

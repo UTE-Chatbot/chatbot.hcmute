@@ -1,5 +1,5 @@
 from typing import Literal, Any
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.messages.utils import count_tokens_approximately
 from langgraph.graph import StateGraph, START, END
 from langmem.short_term import SummarizationNode
@@ -182,7 +182,8 @@ class RAG:
         
         pg_history = self.chat_memory.get_session_history(thread_id)
         pg_history.add_user_message(question)
-        pg_history.add_ai_message(response)
+        info = state.get("information", [])
+        pg_history.add_message(AIMessage(content=response, additional_kwargs={"information": info}))
         
         if question and response and not cache_hit:
             await self.semantic_cache.add_to_cache_async(question, response)

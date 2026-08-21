@@ -250,3 +250,73 @@ async def search_document(
         })
         
     return JSONResponse(content=formatted_results, status_code=status.HTTP_200_OK)
+
+
+@router.get("/chunks/keyword-search")
+async def keyword_search_chunks(
+    keyword: str,
+    page: int = 1,
+    size: int = 20,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
+):
+    if not keyword or not keyword.strip():
+        return JSONResponse(
+            content={"items": [], "total": 0, "page": 1, "size": size, "pages": 0},
+            status_code=status.HTTP_200_OK
+        )
+    
+    result = await document_service.keyword_search_chunks(session, keyword.strip(), page, size)
+    
+    items = []
+    for chunk in result["items"]:
+        doc = await document_service.get_document_by_id(session, chunk.document_id)
+        items.append({
+            "id": chunk.id,
+            "document_id": chunk.document_id,
+            "document_name": doc.name if doc else "Unknown",
+            "chunk_index": chunk.chunk_index,
+            "text": chunk.text,
+            "topic": doc.document_metadata.get("topic") if doc and doc.document_metadata else None,
+            "subtopic": doc.document_metadata.get("subtopic") if doc and doc.document_metadata else None
+        })
+    
+    return JSONResponse(
+        content={
+            "items": items,
+            "total": result["total"],
+            "page": result["page"],
+            "size": result["size"],
+            "pages": result["pages"]
+        },
+        status_code=status.HTTP_200_OK
+    )
+
+
+from pydantic import BaseModel
+from typing import Optional, List as PyList
+
+
+class BulkReplaceRequest(BaseModel):
+    keyword: str
+    replacement: str
+    chunk_ids: Optional[PyList[int]] = None
+
+
+@router.post("/chunks/bulk-replace")
+async def bulk_replace_keyword(
+    request: BulkReplaceRequest,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleEnum.ADMIN))
+):
+    if not request.keyword or not request.keyword.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keyword is required")
+    
+    result = await document_service.bulk_replace_keyword_in_chunks(
+        session,
+        request.keyword.strip(),
+        request.replacement,
+        request.chunk_ids
+    )
+    
+    return JSONResponse(content=result, status_code=status.HTTP_200_OK)

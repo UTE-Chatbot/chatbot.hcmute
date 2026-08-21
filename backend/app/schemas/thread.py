@@ -27,6 +27,7 @@ class ThreadResponse(BaseModel):
 class MessageResponse(BaseModel):
     role: str  # "human" or "ai"
     content: str
+    information: Optional[List[str]] = None
 
 
 class ThreadMessagesResponse(BaseModel):
@@ -60,6 +61,12 @@ class DashboardStatsResponse(BaseModel):
     thread_counts: List[ThreadCountByDate]
     popular_keywords: List[KeywordStat]
     popular_topics: List[str]
+    total_feedbacks: Optional[int] = None
+    average_rating: Optional[float] = None
+    accurate_percentage: Optional[float] = None
+    helpful_percentage: Optional[float] = None
+    understandable_percentage: Optional[float] = None
+
 
 
 class QuestionRequest(BaseModel):

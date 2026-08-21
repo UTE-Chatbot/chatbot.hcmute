@@ -1,1 +1,0 @@
-Tap tin Nginx da gom ca CERT va ROOT Bundle

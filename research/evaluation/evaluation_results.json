@@ -1,0 +1,32 @@
+{
+  "our_rag": {
+    "text": {
+      "nv_accuracy": 0.538125,
+      "answer_relevancy": 0.638700579070353
+    },
+    "text2sql": {
+      "nv_accuracy": 0.88625,
+      "answer_relevancy": 0.7617446994784729
+    }
+  },
+  "llm_only": {
+    "text": {
+      "nv_accuracy": 0.23875,
+      "answer_relevancy": 0.26085563297179826
+    },
+    "text2sql": {
+      "nv_accuracy": 0.0,
+      "answer_relevancy": 0.0
+    }
+  },
+  "basic_rag": {
+    "text": {
+      "nv_accuracy": 0.503125,
+      "answer_relevancy": 0.6028391549387639
+    },
+    "text2sql": {
+      "nv_accuracy": 0.36625,
+      "answer_relevancy": 0.3387058567099254
+    }
+  }
+}

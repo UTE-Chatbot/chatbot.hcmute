@@ -28,6 +28,7 @@ import {
   MessageSquare,
   LayoutDashboard,
   Settings,
+  Star,
 } from "lucide-react";
 import { CacheSettingsDialog } from "./cache-settings-dialog";
 
@@ -46,6 +47,11 @@ const menuItems = [
     title: "Quản lý hội thoại",
     url: "/admin/thread",
     icon: MessageSquare,
+  },
+  {
+    title: "Quản lý phản hồi",
+    url: "/admin/feedback",
+    icon: Star,
   },
 ];
 

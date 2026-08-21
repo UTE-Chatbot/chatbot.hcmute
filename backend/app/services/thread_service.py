@@ -209,7 +209,8 @@ async def get_thread_messages(thread_id: UUID) -> List[MessageResponse]:
             else:
                 continue
             
-            message_responses.append(MessageResponse(role=role, content=message.content))
+            info = message.additional_kwargs.get("information") if hasattr(message, "additional_kwargs") and message.additional_kwargs else None
+            message_responses.append(MessageResponse(role=role, content=message.content, information=info))
         
         return message_responses
     except Exception as e:
@@ -457,6 +458,9 @@ async def get_dashboard_stats(
     keyword_strings = [k.keyword for k in keywords]
     topics = _extract_topics_from_keywords(keyword_strings)
 
+    from app.services import feedback_service
+    fb_stats = await feedback_service.get_feedback_stats(db, start_date, end_date)
+
     return DashboardStatsResponse(
         total_threads=total_threads,
         total_csvs=total_csvs,
@@ -464,7 +468,12 @@ async def get_dashboard_stats(
         total_users=total_users,
         thread_counts=date_counts,
         popular_keywords=keywords,
-        popular_topics=topics
+        popular_topics=topics,
+        total_feedbacks=fb_stats["total_feedbacks"],
+        average_rating=fb_stats["average_rating"],
+        accurate_percentage=fb_stats["accurate_percentage"],
+        helpful_percentage=fb_stats["helpful_percentage"],
+        understandable_percentage=fb_stats["understandable_percentage"]
     )
 
 
